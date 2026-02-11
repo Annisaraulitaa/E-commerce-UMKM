@@ -124,18 +124,23 @@ def add_image_columns_to_csv(input_csv: str, output_csv: str, img_dir: str, max_
     """
     Read existing CSV (from fixmain.py), add image columns, scrape and download images,
     then save to new CSV with complete columns like fixmain2.py.
+    Resumes from last unprocessed product if output_csv exists.
     """
     os.makedirs(img_dir, exist_ok=True)
 
-    # Read input CSV
-    df = pd.read_csv(input_csv)
-    print(f"Loaded {len(df)} products from {input_csv}")
-
-    # Add new columns for images
-    df['mediaURL_image_fixed'] = ""
-    df['image_status'] = None
-    df['image_source'] = None
-    df['image_local_path'] = None
+    if os.path.exists(output_csv):
+        # Resume from existing output CSV
+        df = pd.read_csv(output_csv)
+        print(f"Resuming from existing CSV: {output_csv} ({len(df)} products)")
+    else:
+        # Start fresh from input CSV
+        df = pd.read_csv(input_csv)
+        print(f"Loaded {len(df)} products from {input_csv}")
+        # Add new columns for images
+        df['mediaURL_image_fixed'] = ""
+        df['image_status'] = None
+        df['image_source'] = None
+        df['image_local_path'] = None
 
     session = requests.Session()
 
@@ -146,60 +151,81 @@ def add_image_columns_to_csv(input_csv: str, output_csv: str, img_dir: str, max_
         if max_products and processed >= max_products:
             break
 
-        product_id = str(row['id'])
-        product_url = row['url']
-        product_name = row['name']
-        mediaURL_image = row.get('mediaURL_image', '')
+        try:
+            product_id = str(row['id'])
+            product_url = row['url']
+            product_name = row['name']
+            mediaURL_image = row.get('mediaURL_image', '')
 
-        print(f"[{processed+1}] Processing product {product_id}: {product_name[:50]}...")
+            print(f"[{processed+1}] Processing product {product_id}: {product_name[:50]}...")
 
-        # Fix the image URL
-        img_fixed = fix_img_url(mediaURL_image) if mediaURL_image else ""
-        df.at[idx, 'mediaURL_image_fixed'] = img_fixed
+            # Skip if already processed
+            if pd.notna(df.at[idx, 'image_local_path']):
+                print("  Already processed, skipping")
+                processed += 1
+                continue
 
-        # Try to download from fixed URL first
-        local_path = os.path.join(img_dir, f"{product_id}.jpg")
-        image_downloaded = False
+            # Fix the image URL
+            img_fixed = fix_img_url(mediaURL_image) if mediaURL_image else ""
+            df.at[idx, 'mediaURL_image_fixed'] = img_fixed
 
-        if img_fixed:
-            time.sleep(random.uniform(0.3, 0.9))
-            ok, st = download_image(session, img_fixed, local_path, IMG_HEADERS_CDN)
-            if ok:
-                df.at[idx, 'image_status'] = st
-                df.at[idx, 'image_source'] = "signed"
-                df.at[idx, 'image_local_path'] = local_path
-                image_downloaded = True
-                total_images += 1
-                print(f"  Downloaded from signed URL ({st})")
-            else:
-                print(f"  Failed signed URL ({st})")
+            # Try to download from fixed URL first
+            local_path = os.path.join(img_dir, f"{product_id}.jpg")
+            image_downloaded = False
 
-        # If failed, try refresh from product page
-        if not image_downloaded:
-            candidates = refresh_image_from_product_page(session, product_url, PAGE_HEADERS_HTML)
-            if candidates:
-                # Try first candidate
-                img_url = candidates[0]
+            if img_fixed:
                 time.sleep(random.uniform(0.3, 0.9))
-                ok, st = download_image(session, img_url, local_path, IMG_HEADERS_CDN)
-                if ok:
-                    df.at[idx, 'image_status'] = st
-                    df.at[idx, 'image_source'] = "refreshed"
-                    df.at[idx, 'image_local_path'] = local_path
-                    image_downloaded = True
-                    total_images += 1
-                    print(f"  Downloaded from refreshed URL ({st})")
-                else:
-                    df.at[idx, 'image_status'] = st
-                    print(f"  Failed refreshed URL ({st})")
-            else:
-                print("  No image candidates found")
+                try:
+                    ok, st = download_image(session, img_fixed, local_path, IMG_HEADERS_CDN)
+                    if ok:
+                        df.at[idx, 'image_status'] = st
+                        df.at[idx, 'image_source'] = "signed"
+                        df.at[idx, 'image_local_path'] = local_path
+                        image_downloaded = True
+                        total_images += 1
+                        print(f"  Downloaded from signed URL ({st})")
+                    else:
+                        print(f"  Failed signed URL ({st})")
+                except Exception as e:
+                    print(f"  Error downloading signed: {e}")
 
-        processed += 1
+            # If failed, try refresh from product page
+            if not image_downloaded:
+                try:
+                    candidates = refresh_image_from_product_page(session, product_url, PAGE_HEADERS_HTML)
+                    if candidates:
+                        # Try first candidate
+                        img_url = candidates[0]
+                        time.sleep(random.uniform(0.3, 0.9))
+                        ok, st = download_image(session, img_url, local_path, IMG_HEADERS_CDN)
+                        if ok:
+                            df.at[idx, 'image_status'] = st
+                            df.at[idx, 'image_source'] = "refreshed"
+                            df.at[idx, 'image_local_path'] = local_path
+                            image_downloaded = True
+                            total_images += 1
+                            print(f"  Downloaded from refreshed URL ({st})")
+                        else:
+                            df.at[idx, 'image_status'] = st
+                            print(f"  Failed refreshed URL ({st})")
+                    else:
+                        print("  No image candidates found")
+                except Exception as e:
+                    print(f"  Error refreshing: {e}")
+
+            processed += 1
+
+        except Exception as e:
+            print(f"  Error processing product {idx}: {e}")
+            processed += 1  # Still count as processed to avoid infinite loop
+            continue
 
         # Update CSV after each product for continuous saving
-        df.to_csv(output_csv, index=False)
-        print(f"  Updated CSV after processing {processed} products")
+        try:
+            df.to_csv(output_csv, index=False)
+            print(f"  Updated CSV after processing {processed} products")
+        except Exception as e:
+            print(f"  Error saving CSV: {e} - Make sure the file is not open in another program (e.g., Excel)")
 
         # Longer pause between products
         time.sleep(random.uniform(1, 3))
