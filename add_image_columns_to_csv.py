@@ -120,11 +120,11 @@ def download_image(session: requests.Session, img_url: str, out_path: str, img_h
 # MAIN FUNCTION TO ADD IMAGE COLUMNS TO EXISTING CSV
 # =========================================================
 
-def add_image_columns_to_csv(input_csv: str, output_csv: str, img_dir: str, max_products: int = None, max_images_per_product: int = 3):
+def add_image_columns_to_csv(input_csv: str, output_csv: str, img_dir: str, max_products: int = None, max_images_per_product: int = 3, start_idx: int = 0, stop_idx: int = None):
     """
     Read existing CSV (from fixmain.py), add image columns, scrape and download images,
     then save to new CSV with complete columns like fixmain2.py.
-    Resumes from last unprocessed product if output_csv exists.
+    Resumes from last unprocessed product if output_csv exists, or from start_idx to stop_idx.
     """
     os.makedirs(img_dir, exist_ok=True)
 
@@ -147,7 +147,23 @@ def add_image_columns_to_csv(input_csv: str, output_csv: str, img_dir: str, max_
     processed = 0
     total_images = 0
 
-    for idx, row in df.iterrows():
+    # Find the effective start index: first unprocessed product from start_idx
+    effective_start = start_idx
+    for idx in range(start_idx, len(df)):
+        if pd.notna(df.at[idx, 'image_local_path']):
+            continue
+        else:
+            effective_start = idx
+            break
+    else:
+        effective_start = len(df)  # All processed
+
+    print(f"Starting processing from index {effective_start}")
+
+    for idx in range(effective_start, len(df)):
+        if stop_idx is not None and idx >= stop_idx:
+            break
+        row = df.iloc[idx]
         if max_products and processed >= max_products:
             break
 
@@ -241,13 +257,19 @@ def add_image_columns_to_csv(input_csv: str, output_csv: str, img_dir: str, max_
 
 if __name__ == "__main__":
     # Input CSV from fixmain.py (without image columns)
-    input_csv = r"d:\DATA CACA\00. College\Skripsi\E-commerce-UMKM\data lama\ulang lagi 2\aksesoriAnak_enriched.csv"
+    input_csv = r"d:\DATA CACA\00. College\Skripsi\E-commerce-UMKM\data lama\ulang lagi 2\pakaianAnakCewek_enriched.csv"
 
     # Output CSV with image columns added
-    output_csv = r"d:\DATA CACA\00. College\Skripsi\E-commerce-UMKM\data lama\ulang lagi 2\aksesoriAnak_enriched_with_images.csv"
+    output_csv = r"d:\DATA CACA\00. College\Skripsi\E-commerce-UMKM\data lama\ulang lagi 2\pakaianAnakCewek_enriched_with_images.csv"
 
     # Image directory
-    img_dir = r"d:\DATA CACA\00. College\Skripsi\E-commerce-UMKM\data lama\ulang lagi 2\aksesoriAnak_enriched_images"
+    img_dir = r"d:\DATA CACA\00. College\Skripsi\E-commerce-UMKM\data lama\ulang lagi 2\pakaianAnakCewek_enriched_images"
 
-    # Process all products
-    add_image_columns_to_csv(input_csv, output_csv, img_dir, max_products=None, max_images_per_product=1)
+    # Set start_idx to skip to a specific index
+    start_idx = 300  # Change this to the desired starting index (0-based)
+
+    # Set stop_idx  to stop at a specific index (optional, None to process all)
+    stop_idx = 599  # Change to a number4 
+
+    # Process all products starting from start_idx to stop_idx
+    add_image_columns_to_csv(input_csv, output_csv, img_dir, max_products=None, max_images_per_product=1, start_idx=start_idx, stop_idx=stop_idx)
