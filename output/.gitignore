@@ -9,6 +9,8 @@
 /atk_enriched_images
 /bajuPria_enriched_images
 /bajuWanita_enriched_images
+/barangCustom_enriched_images
+/batik_enriched_images
 /bukuAnak_enriched_images
 /bukuPelajaran_enriched_images
 /bodyCare_enriched_images
@@ -18,8 +20,8 @@
 /dalamanPria_enriched_images
 /dalamanWanita_enriched_images
 /gordenRumah_enriched_images
-#/gadget_enriched_images
 /hairCare_enriched_images
+/hampersLebaran_enriched_images
 /hiasanRumah_enriched_images
 /homeCare_enriched_images
 /jaketPria_enriched_images
@@ -29,8 +31,9 @@
 /kainDaerah_enriched_images
 /kebersihan_enriched_images
 /kerajinanAnyaman_enriched_images
-/kesehatan_enriched_images
 /kerajinanTangan_enriched_images
+/keripikKhas_enriched_images
+/kesehatan_enriched_images
 /khasDaerah_enriched_images
 /kopiKhas_enriched_images
 /kueKering_enriched_images
@@ -40,6 +43,7 @@
 /makeUp_enriched_images
 /muslimahWanita_enriched_images
 /muslimPria_enriched_images
+/olehKhas_enriched_images
 /otomotif_enriched_images
 /outerWanita_enriched_images
 /pakaianAdat_enriched_images
@@ -53,6 +57,7 @@
 /perlengkapanIbadah_enriched_images
 /perlengkapanTidur_enriched_images
 /personalCare_enriched_images
+/produkHandmade_enriched_images
 /rempahKhas_enriched_images
 /sandalAnak_enriched_images
 /sandalPria_enriched_images
@@ -62,6 +67,8 @@
 /sepatuWanita_enriched_images
 /skincare_enriched_images
 /skincareLokal_enriched_images
+/souvenir_enriched_images
 /tasPria_enriched_images
 /tasWanita_enriched_images
+/tenun_enriched_images
 /vitaminSuplemen_enriched_images
