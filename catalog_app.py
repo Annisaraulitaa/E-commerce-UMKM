@@ -97,7 +97,7 @@ if "current_page" not in st.session_state:
 
 def load_data():
     path = Path("output")
-    files = sorted([f.name for f in path.glob("*_enriched.csv")])
+    files = sorted([f.name for f in path.glob("hiasanRumah_enriched.csv")])
     if files: return pd.read_csv(path / files[0])
     return pd.DataFrame()
 
@@ -208,7 +208,7 @@ def show_katalog(df):
                     st.markdown(f"""
                         <div class="product-card">
                             <div class="img-container">
-                                <img src="{row.get('mediaURL_image', '')}">
+                                <img src="{row.get('image_local_path', '')}">
                                 <div class="badge-best" style="position:absolute; top:10px; left:10px; background:#FFC400; padding:2px 8px; border-radius:4px; font-size:10px; font-weight:bold;">UMKM</div>
                             </div>
                             <div class="card-content">
@@ -234,7 +234,7 @@ def show_detail(item):
     st.markdown('</div>', unsafe_allow_html=True)
     
     c_l, c_r = st.columns([1, 1.5])
-    with c_l: st.image(item.get('mediaURL_image'), use_container_width=True)
+    with c_l: st.image(item.get('image_local_path', ''), use_container_width=True)
     with c_r:
         st.caption(item.get('category_breadcrumb'))
         st.title(item.get('name'))
