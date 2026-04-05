@@ -1,3 +1,7 @@
+# =========================================================
+# code fix yang dipakai untuk craping dataset
+# =========================================================
+
 import os, json, time, random, re
 from typing import Dict, Any, List, Optional, Tuple
 from urllib.parse import parse_qsl, urlencode
@@ -7,7 +11,7 @@ import pandas as pd
 
 
 # =========================================================
-# 0) CFG
+# 1) CFG
 # =========================================================
 
 BD_DEVICE_ID = "7527216031573837313"
@@ -222,7 +226,7 @@ OUTPUT_COLS = [
 
 
 # =========================================================
-# 1) POLITE REQUESTER (THROTTLE + BACKOFF + LONG BREAK)
+# 2) POLITE REQUESTER (THROTTLE + BACKOFF + LONG BREAK)
 # =========================================================
 
 class PoliteRequester:
@@ -281,7 +285,7 @@ class PoliteRequester:
 
 
 # =========================================================
-# 2) HELPERS: PARAMS PAGINATION (additionalParams), parse sold, topads
+# 3a) HELPERS: PARAMS PAGINATION (additionalParams), parse sold, topads
 # =========================================================
 
 def first_item_if_list(x: Any) -> Any:
@@ -364,7 +368,7 @@ def is_topads_from_ads(ads: dict) -> bool:
 
 
 # =========================================================
-# 2b) IMAGE HELPERS: fix url, refresh from product page, download local
+# 3b) IMAGE HELPERS: fix url, refresh from product page, download local
 # =========================================================
 
 IMG_RE = re.compile(r"https://[^\"'<> ]+tokopedia-static\.net[^\"'<> ]+\.(?:jpg|jpeg|png|webp)[^\"'<> ]*")
@@ -429,7 +433,7 @@ def download_image(session: requests.Session, img_url: str, out_path: str, img_h
 
 
 # =========================================================
-# 3) FETCHERS: SEARCH + REVIEW
+# 4) FETCHERS: SEARCH + REVIEW
 # =========================================================
 
 def flatten_search_product(p: Dict[str, Any]) -> Dict[str, Any]:
@@ -507,7 +511,7 @@ def fetch_review_summary(pr: PoliteRequester, session: requests.Session, product
 
 
 # =========================================================
-# 4) CHECKPOINT + SAVE BERTAHAP
+# 5) CHECKPOINT + SAVE BERTAHAP
 # =========================================================
 
 def load_state(state_path: str) -> Dict[str, Any]:
@@ -529,7 +533,7 @@ def append_rows_to_csv(csv_path: str, rows: List[Dict[str, Any]]):
 
 
 # =========================================================
-# 5) RUNNER: BERTAHAP + STOP KALAU has_more=false
+# 6) RUNNER: BERTAHAP + STOP KALAU has_more=false
 # =========================================================
 
 def run_scrape_enrich_batched(
