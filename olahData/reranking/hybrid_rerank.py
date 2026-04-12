@@ -14,9 +14,17 @@ def compute_balanced_hybrid(
 ):
     df = df_candidates.copy()
 
-    # !Pastikan umkm_label aman!
-    df["umkm_label"] = df["umkm_label"].fillna(0).astype(int)
-
+    # Pastikan umkm_label aman! Konversi label string ke numeric
+    df["umkm_label"] = df["umkm_label"].replace({
+        "UMKM": 1,
+        "NON_UMKM": 0
+    })
+    
+    df["umkm_label"] = pd.to_numeric(
+        df["umkm_label"],
+        errors="coerce"
+    ).fillna(0).astype(int)
+    
     # --- Relevance ---
     df["bm25_norm"] = normalize_minmax(df["bm25_score"])
 
@@ -91,19 +99,27 @@ def apply_fairness_constraint(
 # =========================================================
 # Full Balanced Hybrid Pipeline
 # =========================================================
-from retrieval.bm25 import bm25_candidates
-
 def balanced_hybrid_search(
     query,
     top_n_candidates=2000,
     top_k_results=20,
-    min_umkm_ratio=0.4
+    min_umkm_ratio=0.0, #sebelumnya =0.4
+    lambda_umkm=0.3,
+    alpha=0.4,
+    beta=0.15,
+    gamma=0.15
 ):
     # BM25 Candidate Retrieval
     candidates = bm25_candidates(query, top_n=top_n_candidates)
 
     # Balanced Hybrid Scoring
-    ranked = compute_balanced_hybrid(candidates)
+    ranked = compute_balanced_hybrid(
+        candidates,
+        alpha=alpha,
+        beta=beta,
+        gamma=gamma,
+        lambda_umkm=lambda_umkm
+    )
 
     # Fairness Guarantee
     final_results = apply_fairness_constraint(

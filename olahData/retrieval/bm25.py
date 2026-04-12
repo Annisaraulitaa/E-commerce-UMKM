@@ -1,8 +1,8 @@
 # =========================================================
 # 1. IMPORT LIBRARY
 # =========================================================
+import os
 import re
-import pickle
 import pandas as pd
 from rank_bm25 import BM25Okapi
 
@@ -10,7 +10,8 @@ from rank_bm25 import BM25Okapi
 # =========================================================
 # 2. KONFIGURASI
 # =========================================================
-CSV_PATH = "nondup_labeled_dataset.csv"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CSV_PATH = os.path.join(BASE_DIR, "nondup_labeled_dataset.csv")
 ENCODING = "utf-8"
 TOPK = 20
 
@@ -23,11 +24,10 @@ TEXT_COLS = [
 OUT_COLS = [
     "id", "name", "url",
     "category_breadcrumb",
-    "price_number",          
-    "discountPercentage",
-    "ratingAverage", "shop_id",
-    "shop_name", "shop_city", "shop_tier",
-    "countSold", "has_Promo", "umkm_label",
+    "price_number", "discountPercentage",
+    "ratingAverage", "shop_id", "shop_name",
+    "shop_city", "shop_tier", "countSold",
+    "name_clean","has_Promo", "umkm_label",
 ]
 
 

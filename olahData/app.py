@@ -1,8 +1,3 @@
-import sys
-import os
-# sys.path.append(os.path.abspath(".."))  # jika notebook ada di subfolder
-# sys.path.append(os.getcwd())  # jika notebook ada di root
-
 from reranking.hybrid_rerank import balanced_hybrid_search
 
 if __name__ == "__main__":
