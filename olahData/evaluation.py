@@ -1,30 +1,69 @@
 import numpy as np
 import pandas as pd
 import re
-from retrieval.bm25 import bm25_search
+from retrieval.bm25 import bm25_candidates, bm25_search
 from reranking.hybrid_rerank import balanced_hybrid_search
+
+
+# =========================================================
+# FIXED FINAL PARAMETERS
+# =========================================================
+TOP_K = 20
+TOP_N_CANDIDATES = 2000
+MIN_UMKM_RATIO = 0.4
+
+ALPHA = 0.6
+BETA = 0.15
+GAMMA = 0.25
+LAMBDA_UMKM = 0.1
+
+POPULARITY_SOLD_WEIGHT = 0.6
+POPULARITY_REVIEW_WEIGHT = 0.4
+VALUE_RATING_WEIGHT = 0.7
+VALUE_DISCOUNT_WEIGHT = 0.3
 
 
 # =========================================================
 # METRIC FUNCTIONS
 # =========================================================
-
-def precision_at_k(df, query, k=20):
+def precision_at_k(df, query, k=20, threshold=0.5):
     df_k = df.head(k)
-    q_tokens = re.findall(r'\w+', query.lower())
+    q_tokens = re.findall(r"\w+", query.lower())
 
     def relevant_score(text):
         text = str(text).lower()
         match_count = sum(token in text for token in q_tokens)
         return match_count / len(q_tokens) if len(q_tokens) > 0 else 0
-    
-    relevant = df_k["name_clean"].apply(relevant_score)
-    return relevant.mean()
+
+    relevant = df_k["name_clean"].apply(relevant_score) >= threshold
+    return float(relevant.mean())
+
+
+def recall_at_k(df_topk, df_all, query, k=20, threshold=0.5):
+    q_tokens = re.findall(r"\w+", query.lower())
+
+    def relevant_score(text):
+        text = str(text).lower()
+        match_count = sum(token in text for token in q_tokens)
+        return match_count / len(q_tokens) if len(q_tokens) > 0 else 0
+
+    # seluruh item relevan di kumpulan kandidat
+    all_rel = df_all["name_clean"].apply(relevant_score) >= threshold
+    total_relevant = int(all_rel.sum())
+
+    if total_relevant == 0:
+        return 0.0
+
+    # item relevan yang berhasil masuk top-K
+    topk_rel = df_topk.head(k)["name_clean"].apply(relevant_score) >= threshold
+    retrieved_relevant = int(topk_rel.sum())
+
+    return retrieved_relevant / total_relevant
 
 
 def fairness_at_k(df, k=20):
     df_k = df.head(k)
-    return df_k["umkm_label"].mean()
+    return float(df_k["umkm_label"].mean())
 
 
 def ndcg_at_k(df, k=20):
@@ -32,11 +71,26 @@ def ndcg_at_k(df, k=20):
     df_k["rel"] = df_k["bm25_score"]
 
     dcg = np.sum(df_k["rel"] / np.log2(np.arange(2, len(df_k) + 2)))
-
     ideal = df_k.sort_values("rel", ascending=False)
     idcg = np.sum(ideal["rel"] / np.log2(np.arange(2, len(ideal) + 2)))
 
-    return dcg / idcg if idcg > 0 else 0
+    return float(dcg / idcg) if idcg > 0 else 0.0
+
+
+def exposure_disparity_at_k(df, k=20):
+    df_k = df.head(k).copy()
+    df_k["rank"] = np.arange(1, len(df_k) + 1)
+    df_k["exposure"] = 1 / np.log2(df_k["rank"] + 1)
+
+    umkm_exp = df_k[df_k["umkm_label"] == 1]["exposure"].mean()
+    non_umkm_exp = df_k[df_k["umkm_label"] == 0]["exposure"].mean()
+
+    if np.isnan(umkm_exp):
+        umkm_exp = 0.0
+    if np.isnan(non_umkm_exp):
+        non_umkm_exp = 0.0
+
+    return float(abs(umkm_exp - non_umkm_exp))
 
 
 def prepare_label(df):
@@ -52,20 +106,22 @@ def prepare_label(df):
     return df
 
 
-def evaluate_single_result(df_result, query, k=20):
+def evaluate_result(df_result, candidate_pool, query, k=20):
     df_result = prepare_label(df_result)
+    candidate_pool = prepare_label(candidate_pool)
 
     return {
-        "Precision@20": precision_at_k(df_result, query, k),
-        "NDCG@20": ndcg_at_k(df_result, k),
-        "Fairness@20": fairness_at_k(df_result, k),
+        "Precision@20": precision_at_k(df_result, query, k=k, threshold=0.5),
+        "Recall@20": recall_at_k(df_result, candidate_pool, query, k=k, threshold=0.5),
+        "NDCG@20": ndcg_at_k(df_result, k=k),
+        "Fairness@20": fairness_at_k(df_result, k=k),
+        "ExposureDisparity@20": exposure_disparity_at_k(df_result, k=k),
     }
 
 
 # =========================================================
-# EXPERIMENT RUNNER
+# FINAL EVALUATION
 # =========================================================
-
 if __name__ == "__main__":
 
     test_queries = [
@@ -77,55 +133,68 @@ if __name__ == "__main__":
         "hiasan rumah handmade",
     ]
 
-    lambda_values = [0.0, 0.1, 0.2, 0.3, 0.4]
-
     all_results = []
 
     for q in test_queries:
         print(f"\n=== QUERY: {q} ===")
 
-        # BM25 baseline
-        bm25_results = bm25_search(q, topk=20)
-        bm25_metrics = evaluate_single_result(bm25_results, q, k=20)
+        candidate_pool = bm25_candidates(q, top_n=TOP_N_CANDIDATES)
+
+        # =====================================================
+        # --- BM25 baseline ---
+        # =====================================================
+        bm25_results = bm25_search(q, topk=TOP_K)
+        bm25_metrics = evaluate_result(bm25_results, candidate_pool, q, k=TOP_K)
         bm25_metrics["query"] = q
         bm25_metrics["method"] = "BM25"
-        bm25_metrics["lambda"] = None
         all_results.append(bm25_metrics)
 
-        # Hybrid multi-lambda
-        for lam in lambda_values:
-            hybrid_results = balanced_hybrid_search(
-                query=q,
-                top_n_candidates=2000,
-                top_k_results=20,
-                min_umkm_ratio=0.0,   #sebelumnya =0.4
-                lambda_umkm=lam
-            )
+        # =====================================================
+        # Hybrid final
+        # =====================================================
+        hybrid_results = balanced_hybrid_search(
+            query=q,
+            top_n_candidates=TOP_N_CANDIDATES,
+            top_k_results=TOP_K,
+            min_umkm_ratio=MIN_UMKM_RATIO,
+            lambda_umkm=LAMBDA_UMKM,
+            alpha=ALPHA,
+            beta=BETA,
+            gamma=GAMMA,
+            popularity_sold_weight=POPULARITY_SOLD_WEIGHT,
+            popularity_review_weight=POPULARITY_REVIEW_WEIGHT,
+            value_rating_weight=VALUE_RATING_WEIGHT,
+            value_discount_weight=VALUE_DISCOUNT_WEIGHT
+        )
 
-            metrics = evaluate_single_result(hybrid_results, q, k=20)
-            metrics["query"] = q
-            metrics["method"] = "Hybrid"
-            metrics["lambda"] = lam
-            all_results.append(metrics)
+        hybrid_metrics = evaluate_result(hybrid_results, candidate_pool, q, k=TOP_K)
+        hybrid_metrics["query"] = q
+        hybrid_metrics["method"] = "Hybrid_Final"
+        all_results.append(hybrid_metrics)
 
     df_eval = pd.DataFrame(all_results)
 
-    print("\n===== HASIL EKSPERIMEN =====")
+    print("\n===== HASIL EVALUASI FINAL =====")
     print(df_eval)
 
-    df_eval.to_csv("evaluation_results_multi_lambda.csv", index=False)
-    print("\nDisimpan: evaluation_results_multi_lambda.csv")
+    df_eval.to_csv("evaluation_results_final.csv", index=False)
+    print("\nDisimpan: evaluation_results_final.csv")
 
-    # Ringkasan rata-rata per lambda
-    df_hybrid_summary = (
-        df_eval[df_eval["method"] == "Hybrid"]
-        .groupby("lambda")[["Precision@20", "NDCG@20", "Fairness@20"]]
+    summary = (
+        df_eval
+        .groupby("method")[[
+            "Precision@20",
+            "Recall@20",
+            "NDCG@20",
+            "Fairness@20",
+            "ExposureDisparity@20"
+        ]]
         .mean()
         .reset_index()
     )
 
-    print("\n===== RATA-RATA HYBRID PER LAMBDA =====")
-    print(df_hybrid_summary)
+    print("\n===== RINGKASAN RATA-RATA FINAL =====")
+    print(summary)
 
-    df_hybrid_summary.to_csv("summary_multi_lambda.csv", index=False)
-    print("\nDisimpan: summary_multi_lambda.csv")
+    summary.to_csv("summary_final.csv", index=False)
+    print("\nDisimpan: summary_final.csv")

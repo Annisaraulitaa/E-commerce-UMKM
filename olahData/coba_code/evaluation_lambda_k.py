@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 import re
-from retrieval.bm25 import bm25_search, bm25_candidates
-from reranking.hybrid_rerank import balanced_hybrid_search
+from olahData.retrieval.bm25 import bm25_search, bm25_candidates
+from olahData.reranking.hybrid_rerank import balanced_hybrid_search
 
 
 def relevant_mask(series, query, threshold=0.5):
@@ -84,7 +84,8 @@ if __name__ == "__main__":
         "hiasan rumah handmade",
     ]
 
-    lambda_values = [0.0, 0.1, 0.2, 0.3, 0.4]
+    # lambda_values = [0.0, 0.1, 0.2, 0.3, 0.4]
+    lambda_values = [0.1]
     k_values = [10, 20, 30, 40, 50]
 
     all_results = []
