@@ -6,9 +6,8 @@ from reranking.hybrid_rerank import balanced_hybrid_search
 
 
 # =========================================================
-# 1. FUNGSI METRIK
+# FUNGSI METRIK
 # =========================================================
-
 def relevant_mask(series, query, threshold=0.5):
     """
     Menentukan apakah item dianggap relevan terhadap query.
@@ -111,9 +110,8 @@ def prepare_label(df):
 
 
 # =========================================================
-# 2. KONFIGURASI EKSPERIMEN
+# KONFIGURASI EKSPERIMEN
 # =========================================================
-
 TEST_QUERIES = [
     "kopi khas daerah",
     "kopi instan sachet",
@@ -124,7 +122,7 @@ TEST_QUERIES = [
 ]
 
 # Nilai K yang ingin diuji
-K_VALUES = [20, 30, 40, 50, 60, 70, 80, 90, 100]
+K_VALUES = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 
 # Candidate pool awal dari BM25
 TOP_N_CANDIDATES = 2000
@@ -132,17 +130,34 @@ TOP_N_CANDIDATES = 2000
 # Minimal proporsi UMKM di hasil hybrid
 MIN_UMKM_RATIO = 0.4
 
-# Parameter tetap sementara untuk Stage 1
-ALPHA = 0.5
-BETA = 0.25
-GAMMA = 0.25
-LAMBDA_UMKM = 0.3
+# Parameter (1) tetap sementara untuk Stage 1
+#ALPHA = 0.6
+#BETA = 0.15
+#GAMMA = 0.25
+#LAMBDA_UMKM = 0.1
+
+# Parameter (2) tetap sementara untuk Stage 1 (parameter awal)
+#ALPHA = 0.5
+#BETA = 0.25
+#GAMMA = 0.25
+#LAMBDA_UMKM = 0.1
+
+# Parameter (3) tetap sementara untuk Stage 1
+#ALPHA = 0.50
+#BETA = 0.30
+#GAMMA = 0.20
+#LAMBDA_UMKM = 0.1
+
+# Parameter (4) tetap sementara untuk Stage 1
+ALPHA = 0.50
+BETA = 0.20
+GAMMA = 0.30
+LAMBDA_UMKM = 0.1
 
 
 # =========================================================
-# 3. EVALUASI UNTUK SETIAP NILAI K
+# EVALUASI UNTUK SETIAP NILAI K
 # =========================================================
-
 def evaluate_for_k(k):
     """
     Menghitung metrik BM25 dan Hybrid untuk satu nilai K.
@@ -175,7 +190,7 @@ def evaluate_for_k(k):
         })
 
         # -----------------------------
-        # Hybrid fairness-aware
+        # Hybrid reranking
         # -----------------------------
         hybrid_res = prepare_label(
             balanced_hybrid_search(
@@ -205,9 +220,8 @@ def evaluate_for_k(k):
 
 
 # =========================================================
-# 4. MEMBUAT SUMMARY, COMPARISON, DAN RANKED
+# MEMBUAT SUMMARY, COMPARISON, DAN RANKED
 # =========================================================
-
 def build_stage1_outputs(df_results):
     """
     Menghasilkan 4 output utama:
@@ -216,9 +230,9 @@ def build_stage1_outputs(df_results):
     3. ranked     -> SEMUA nilai K yang sudah diurutkan
     """
 
-    # =====================================================
+    # -----------------------------
     # SUMMARY
-    # =====================================================
+    # -----------------------------
     summary = (
         df_results
         .groupby(["method", "K"])[["Precision", "Recall", "NDCG", "Fairness", "ExposureDisparity"]]
@@ -226,30 +240,30 @@ def build_stage1_outputs(df_results):
         .reset_index()
     )
 
-    # =====================================================
-    # COMPARISON
-    # Gabungkan BM25 dan Hybrid agar mudah dibandingkan
-    # =====================================================
     bm25_summary = summary[summary["method"] == "BM25"].copy()
     hybrid_summary = summary[summary["method"] == "Hybrid"].copy()
 
+    # -----------------------------
+    # COMPARISON
+    # Gabungkan BM25 dan Hybrid agar mudah dibandingkan
+    # -----------------------------
     comparison = hybrid_summary.merge(
         bm25_summary,
         on="K",
         suffixes=("_hybrid", "_bm25")
     )
 
-    # =====================================================
+    comparison["precision_gap"] = comparison["Precision_bm25"] - comparison["Precision_hybrid"]
+    comparison["ndcg_gap"] = comparison["NDCG_bm25"] - comparison["NDCG_hybrid"]
+
+    # -----------------------------
     # RANKED
-    # =====================================================
+    # -----------------------------
     ranked = comparison.copy()
 
     # hitung gap relevance terhadap BM25
-    ranked["precision_gap"] = ranked["Precision_bm25"] - ranked["Precision_hybrid"]
-    ranked["ndcg_gap"] = ranked["NDCG_bm25"] - ranked["NDCG_hybrid"]
-
-    # urutkan secara bertahap
-    ranked = ranked.sort_values(
+    # relevance tetap utama, fairness jadi pembeda berikutnya
+    ranked = comparison.sort_values(
         by=[
             "precision_gap",               # gap precision paling kecil
             "ndcg_gap",                    # gap ndcg paling kecil
@@ -266,9 +280,8 @@ def build_stage1_outputs(df_results):
 
 
 # =========================================================
-# 5. MAIN
+# MAIN
 # =========================================================
-
 if __name__ == "__main__":
     all_results = []
 
@@ -279,13 +292,13 @@ if __name__ == "__main__":
 
     df_results = pd.concat(all_results, ignore_index=True)
 
-    # Bentuk 4 output utama
+    # Bentuk 3 output utama
     summary, comparison, ranked = build_stage1_outputs(df_results)
 
-    # Simpan hanya 4 file utama
-    summary.to_csv("stage1_k_summary.csv", index=False)
-    comparison.to_csv("stage1_k_comparison.csv", index=False)
-    ranked.to_csv("stage1_k_ranked.csv", index=False)
+    # Simpan hanya 3 file utama
+    summary.to_csv("stage1_k_summary(4).csv", index=False)
+    comparison.to_csv("stage1_k_comparison(4).csv", index=False)
+    ranked.to_csv("stage1_k_ranked(4).csv", index=False)
 
     # Tampilkan ke terminal
     print("\n===== SUMMARY =====")

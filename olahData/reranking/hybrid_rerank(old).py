@@ -1,20 +1,39 @@
-from retrieval.bm25 import bm25_candidates, normalize_minmax
 import pandas as pd
 import numpy as np
+from olahData.retrieval.bm25 import bm25_candidates, normalize_minmax
+
 
 # =========================================================
-# Hybrid Scoring
+# FIXED FINAL PARAMETERS
+# =========================================================
+TOP_N_CANDIDATES = 2000
+TOP_K_RESULTS = 40
+MIN_UMKM_RATIO = 0.4
+
+ALPHA = 0.6
+BETA = 0.15
+GAMMA = 0.25
+LAMBDA_UMKM = 0.1
+
+POPULARITY_SOLD_WEIGHT = 0.6
+POPULARITY_REVIEW_WEIGHT = 0.4
+VALUE_RATING_WEIGHT = 0.7
+VALUE_DISCOUNT_WEIGHT = 0.3
+
+
+# =========================================================
+# HYBRID SCORING
 # =========================================================
 def compute_balanced_hybrid(
     df_candidates,
-    alpha=0.6,
-    beta=0.15,
-    gamma=0.25,
-    lambda_umkm=0.1,
-    popularity_sold_weight=0.6,
-    popularity_review_weight=0.4,
-    value_rating_weight=0.7,
-    value_discount_weight=0.3
+    alpha=ALPHA,
+    beta=BETA,
+    gamma=GAMMA,
+    lambda_umkm=LAMBDA_UMKM,
+    popularity_sold_weight=POPULARITY_SOLD_WEIGHT,
+    popularity_review_weight=POPULARITY_REVIEW_WEIGHT,
+    value_rating_weight=VALUE_RATING_WEIGHT,
+    value_discount_weight=VALUE_DISCOUNT_WEIGHT
 ):
     """
     Menghitung skor hybrid untuk kandidat hasil BM25.
@@ -28,7 +47,9 @@ def compute_balanced_hybrid(
     # salin dataframe kandidat BM25 agar data asli tidak berubah
     df = df_candidates.copy()
 
-    # pastikan label UMKM dikonversi ke numeric
+    # =====================================================
+    # --- Pastikan umkm_label konsisten ---
+    # =====================================================
     df["umkm_label"] = df["umkm_label"].replace({
         "UMKM": 1,
         "NON_UMKM": 0
@@ -39,17 +60,23 @@ def compute_balanced_hybrid(
         errors="coerce"
     ).fillna(0).astype(int)
     
+    # =====================================================
     # --- Relevance ---
+    # =====================================================
     df["bm25_norm"] = normalize_minmax(df["bm25_score"])
 
+    # =====================================================
     # --- Popularity ---
+    # =====================================================
     df["popularity_raw"] = (
         popularity_sold_weight * np.log1p(df["countSold"].fillna(0)) +
         popularity_review_weight * np.log1p(df["countReview"].fillna(0))
     )
     df["popularity_norm"] = normalize_minmax(df["popularity_raw"])
 
-    # --- Value --- (awalnya namanya Quality_score)
+    # =====================================================
+    # --- Value Score --- (awalnya Quality_score)
+    # =====================================================
     df["rating_norm"] = normalize_minmax(df["ratingAverage"])
     df["discount_norm"] = normalize_minmax(df["discountPercentage"])
 
@@ -58,14 +85,18 @@ def compute_balanced_hybrid(
         value_discount_weight * df["discount_norm"]
     )
 
+    # =====================================================
     # --- Base Score ---
+    # =====================================================
     df["base_score"] = (
         alpha * df["bm25_norm"] +
         beta * df["popularity_norm"] +
         gamma * df["value_score"]
     )
 
-    # --- Fairness Adjustment (Proportional) ---
+    # =====================================================
+    # --- Fairness Adjustment ---
+    # =====================================================
     df["final_score"] = df["base_score"] * (
         1 + lambda_umkm * df["umkm_label"]
     )
@@ -79,10 +110,13 @@ def compute_balanced_hybrid(
 # =========================================================
 def apply_fairness_constraint(
     df_ranked,
-    top_k=20,
-    min_umkm_ratio=0.4
+    top_k=TOP_K_RESULTS,
+    min_umkm_ratio=MIN_UMKM_RATIO
 ):
-    
+    """
+    Menjamin proporsi minimum UMKM pada top-K.
+    """
+
     # salin hasil ranking agar aman
     df = df_ranked.copy()
 
@@ -92,7 +126,7 @@ def apply_fairness_constraint(
 
     # jika proporsi UMKM sudah memenuhi target, langsung kembalikan
     if current_ratio >= min_umkm_ratio:
-        return top_results
+        return top_results.sort_values("final_score", ascending=False)
 
     # Jumlah UMKM tambahan yang dibutuhkan
     needed_umkm = int(min_umkm_ratio * top_k) - int(top_results["umkm_label"].sum())
@@ -133,17 +167,17 @@ def apply_fairness_constraint(
 # =========================================================
 def balanced_hybrid_search(
     query,
-    top_n_candidates=2000,
-    top_k_results=20,
-    min_umkm_ratio=0.4,
-    lambda_umkm=0.1,
-    alpha=0.6,
-    beta=0.15,
-    gamma=0.25,
-    popularity_sold_weight=0.6,
-    popularity_review_weight=0.4,
-    value_rating_weight=0.7,
-    value_discount_weight=0.3
+    top_n_candidates=TOP_N_CANDIDATES,
+    top_k_results=TOP_K_RESULTS,
+    min_umkm_ratio=MIN_UMKM_RATIO,
+    alpha=ALPHA,
+    beta=BETA,
+    gamma=GAMMA,
+    lambda_umkm=LAMBDA_UMKM,
+    popularity_sold_weight=POPULARITY_SOLD_WEIGHT,
+    popularity_review_weight=POPULARITY_REVIEW_WEIGHT,
+    value_rating_weight=VALUE_RATING_WEIGHT,
+    value_discount_weight=VALUE_DISCOUNT_WEIGHT
 ):
     """
     Pipeline lengkap hybrid ranking:

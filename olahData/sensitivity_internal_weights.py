@@ -6,9 +6,8 @@ from reranking.hybrid_rerank import balanced_hybrid_search
 
 
 # =========================================================
-# 1. METRIC FUNCTIONS
+# METRIC FUNCTIONS
 # =========================================================
-
 def relevant_mask(series, query, threshold=0.5):
     q_tokens = re.findall(r"\w+", query.lower())
 
@@ -81,9 +80,8 @@ def prepare_label(df):
 
 
 # =========================================================
-# 2. CONFIG FINAL PARAMETER
+# CONFIG FINAL PARAMETER
 # =========================================================
-
 TEST_QUERIES = [
     "kopi khas daerah",
     "kopi instan sachet",
@@ -120,10 +118,9 @@ VALUE_WEIGHT_CANDIDATES = [
 
 
 # =========================================================
-# 3. EKSPERIMEN A: SENSITIVITY POPULARITY
-#    Value tetap = 0.7 / 0.3
+# EKSPERIMEN A: SENSITIVITY POPULARITY
+# Value tetap = 0.7 / 0.3
 # =========================================================
-
 def run_popularity_sensitivity():
     rows = []
 
@@ -180,10 +177,9 @@ def run_popularity_sensitivity():
 
 
 # =========================================================
-# 4. EKSPERIMEN B: SENSITIVITY VALUE_SCORE
-#    Popularity tetap = 0.6 / 0.4
+# EKSPERIMEN B: SENSITIVITY VALUE_SCORE
+# Popularity tetap = 0.6 / 0.4
 # =========================================================
-
 def run_value_sensitivity():
     rows = []
 
@@ -233,9 +229,8 @@ def run_value_sensitivity():
 
 
 # =========================================================
-# 5. RINGKASAN HASIL
+# RINGKASAN HASIL
 # =========================================================
-
 def build_summary(df_raw, group_cols):
     metric_cols = [
         "Precision@20",
@@ -256,9 +251,8 @@ def build_summary(df_raw, group_cols):
 
 
 # =========================================================
-# 6. MAIN
+# MAIN
 # =========================================================
-
 if __name__ == "__main__":
     print("Menjalankan sensitivity test untuk popularity...")
     df_pop_raw = run_popularity_sensitivity()

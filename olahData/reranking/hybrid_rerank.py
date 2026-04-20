@@ -1,13 +1,13 @@
-from retrieval.bm25 import bm25_candidates, normalize_minmax
 import pandas as pd
 import numpy as np
+from retrieval.bm25 import bm25_candidates, normalize_minmax
 
 
 # =========================================================
 # FIXED FINAL PARAMETERS
 # =========================================================
 TOP_N_CANDIDATES = 2000
-TOP_K_RESULTS = 20
+TOP_K_RESULTS = 40
 MIN_UMKM_RATIO = 0.4
 
 ALPHA = 0.6
@@ -37,11 +37,6 @@ def compute_balanced_hybrid(
 ):
     """
     Menghitung skor hybrid untuk kandidat hasil BM25.
-    Komponen skor:
-    - Relevance    : bm25_norm
-    - Popularity   : kombinasi countSold dan countReview
-    - Value Score  : kombinasi ratingAverage dan discountPercentage
-    - Fairness     : boost untuk produk UMKM melalui lambda_umkm
     """
 
     # salin dataframe kandidat BM25 agar data asli tidak berubah
@@ -54,7 +49,6 @@ def compute_balanced_hybrid(
         "UMKM": 1,
         "NON_UMKM": 0
     })
-
     df["umkm_label"] = pd.to_numeric(
         df["umkm_label"],
         errors="coerce"
@@ -79,7 +73,6 @@ def compute_balanced_hybrid(
     # =====================================================
     df["rating_norm"] = normalize_minmax(df["ratingAverage"])
     df["discount_norm"] = normalize_minmax(df["discountPercentage"])
-
     df["value_score"] = (
         value_rating_weight * df["rating_norm"] +
         value_discount_weight * df["discount_norm"]
@@ -102,64 +95,84 @@ def compute_balanced_hybrid(
     )
 
     # hasil diurutkan berdasarkan skor akhir tertinggi
-    return df.sort_values("final_score", ascending=False)
-
+    return df.sort_values("final_score", ascending=False).reset_index(drop=True)
 
 # =========================================================
-# Fairness Constraint (Guarantee 40%)
+# UMKM-FIRST SELECTION + FAIRNESS SAFEGUARD
 # =========================================================
-def apply_fairness_constraint(
+def apply_umkm_priority_constraint(
     df_ranked,
     top_k=TOP_K_RESULTS,
     min_umkm_ratio=MIN_UMKM_RATIO
 ):
     """
-    Menjamin proporsi minimum UMKM pada top-K.
+    Aturan:
+    1. Prioritaskan UMKM untuk mengisi top-K terlebih dahulu.
+    2. Jika UMKM tidak cukup, isi sisa slot dengan NON_UMKM terbaik.
+    3. min_umkm_ratio tetap dipertahankan sebagai pengaman minimum.
     """
 
-    # salin hasil ranking agar aman
     df = df_ranked.copy()
+    df = df.sort_values("final_score", ascending=False).reset_index(drop=True)
 
-    # hitung proporsi UMKM di Top-K saat ini
-    top_results = df.head(top_k).copy()
-    current_ratio = top_results["umkm_label"].mean()
+    df_umkm = df[df["umkm_label"] == 1].copy()
+    df_non_umkm = df[df["umkm_label"] == 0].copy()
 
-    # jika proporsi UMKM sudah memenuhi target, langsung kembalikan
-    if current_ratio >= min_umkm_ratio:
-        return top_results.sort_values("final_score", ascending=False)
+    # target minimum UMKM berdasarkan rasio
+    min_umkm_count = int(np.ceil(min_umkm_ratio * top_k))
 
-    # Jumlah UMKM tambahan yang dibutuhkan
-    needed_umkm = int(min_umkm_ratio * top_k) - int(top_results["umkm_label"].sum())
+    # ambil UMKM sebanyak mungkin sampai top_k
+    selected_umkm = df_umkm.head(top_k).copy()
+    umkm_count = len(selected_umkm)
 
-    if needed_umkm <= 0:
-        return top_results.sort_values("final_score", ascending=False)
+    remaining_slots = top_k - umkm_count
 
-    # UMKM terbaik di luar Top-K
-    additional_umkm = df[
-        (df["umkm_label"] == 1) &
-        (~df.index.isin(top_results.index))
-    ].head(needed_umkm) # ambil UMKM terbaik dari luar Top-K sebanyak kebutuhan
+    if remaining_slots > 0:
+        selected_non_umkm = df_non_umkm.head(remaining_slots).copy()
+        final_results = pd.concat(
+            [selected_umkm, selected_non_umkm],
+            ignore_index=True
+        )
+    else:
+        final_results = selected_umkm.copy()
 
-    # Non-UMKM terendah di Top-K
-    non_umkm_to_remove = top_results[
-        top_results["umkm_label"] == 0
-    ].tail(needed_umkm) # buang non-UMKM dengan skor paling rendah di Top-K
+    # safety check:
+    # jika jumlah UMKM di hasil akhir masih kurang dari minimum,
+    # coba ambil UMKM tambahan dari luar hasil akhir dan tukar dengan non-UMKM terbawah
+    current_umkm_count = int(final_results["umkm_label"].sum())
 
-    # Jika tidak cukup UMKM pengganti, pakai sebanyak yang tersedia
-    replace_count = min(len(additional_umkm), len(non_umkm_to_remove))
+    if current_umkm_count < min_umkm_count:
+        needed = min_umkm_count - current_umkm_count
 
-    if replace_count == 0:
-        return top_results.sort_values("final_score", ascending=False)
+        extra_umkm = df_umkm[
+            ~df_umkm.index.isin(final_results.index)
+        ].head(needed).copy()
 
-    additional_umkm = additional_umkm.head(replace_count)
-    non_umkm_to_remove = non_umkm_to_remove.tail(replace_count)
+        non_umkm_in_final = final_results[
+            final_results["umkm_label"] == 0
+        ].sort_values("final_score", ascending=True)
 
-    # tukar non-UMKM terbawah dengan UMKM terbaik dari luar Top-K
-    top_results = top_results.drop(non_umkm_to_remove.index)
-    top_results = pd.concat([top_results, additional_umkm])
+        replace_count = min(len(extra_umkm), len(non_umkm_in_final), needed)
 
-    # urutkan kembali berdasarkan final_score
-    return top_results.sort_values("final_score", ascending=False)
+        if replace_count > 0:
+            to_remove = non_umkm_in_final.head(replace_count)
+            to_add = extra_umkm.head(replace_count)
+
+            final_results = final_results.drop(to_remove.index, errors="ignore")
+            final_results = pd.concat([final_results, to_add], ignore_index=True)
+
+    # urutan akhir:
+    # UMKM di atas dulu, masing-masing tetap berdasarkan final_score tertinggi
+    final_results["umkm_priority"] = final_results["umkm_label"]
+
+    final_results = final_results.sort_values(
+        by=["umkm_priority", "final_score"],
+        ascending=[False, False]
+    ).reset_index(drop=True)
+
+    final_results["final_rank"] = np.arange(1, len(final_results) + 1)
+
+    return final_results.drop(columns=["umkm_priority"])
 
 
 # =========================================================
@@ -180,16 +193,16 @@ def balanced_hybrid_search(
     value_discount_weight=VALUE_DISCOUNT_WEIGHT
 ):
     """
-    Pipeline lengkap hybrid ranking:
+    Pipeline:
     1. Ambil kandidat dari BM25
     2. Hitung skor hybrid
-    3. Terapkan fairness constraint
+    3. Prioritaskan UMKM masuk top-K
+    4. Jika UMKM tidak cukup, isi dengan NON_UMKM terbaik
+    5. min_umkm_ratio tetap dipakai sebagai fairness safeguard
     """
 
-    # BM25 Candidate Retrieval (top N ±2% dataset)
     candidates = bm25_candidates(query, top_n=top_n_candidates)
 
-    # Balanced Hybrid Scoring
     ranked = compute_balanced_hybrid(
         candidates,
         alpha=alpha,
@@ -202,8 +215,7 @@ def balanced_hybrid_search(
         value_discount_weight=value_discount_weight
     )
 
-    # Fairness Guarantee
-    final_results = apply_fairness_constraint(
+    final_results = apply_umkm_priority_constraint(
         ranked,
         top_k=top_k_results,
         min_umkm_ratio=min_umkm_ratio

@@ -6,9 +6,8 @@ from reranking.hybrid_rerank import balanced_hybrid_search
 
 
 # =========================================================
-# 1. FUNGSI METRIK
+# FUNGSI METRIK
 # =========================================================
-
 def relevant_mask(series, query, threshold=0.5):
     """
     Menentukan apakah item relevan terhadap query.
@@ -100,13 +99,13 @@ def prepare_label(df):
         df["umkm_label"],
         errors="coerce"
     ).fillna(0).astype(int)
+
     return df
 
 
 # =========================================================
-# 2. KONFIGURASI
+# KONFIGURASI
 # =========================================================
-
 TEST_QUERIES = [
     "kopi khas daerah",
     "kopi instan sachet",
@@ -118,11 +117,10 @@ TEST_QUERIES = [
 
 TOP_N_CANDIDATES = 2000
 MIN_UMKM_RATIO = 0.4
+K_FINAL = 50
 
 # Kombinasi bobot dasar
-# Catatan:
-# - saya batasi kombinasi agar eksperimen tidak terlalu berat
-# - fokus pada relevance dominan, popularity/value sebagai pendukung
+# fokus pada relevance dominan, popularity/value sebagai pendukung
 WEIGHT_CANDIDATES = [
     (0.4, 0.30, 0.30),
     (0.4, 0.25, 0.35),
@@ -135,25 +133,25 @@ WEIGHT_CANDIDATES = [
     (0.6, 0.15, 0.25),
 ]
 
-LAMBDA_VALUES = [0.0, 0.1, 0.2, 0.3, 0.4]
+# lambda kecil karena UMKM sudah diprioritaskan
+LAMBDA_VALUES = [0.0, 0.05, 0.1, 0.15, 0.2]
 
 
 # =========================================================
-# 3. AMBIL TOP 5 NILAI K DARI HASIL STAGE 1
+# AMBIL TOP 5 NILAI K DARI HASIL STAGE 1
 # =========================================================
 
+"""
 def load_top5_k():
-    """
-    Membaca 5 nilai K teratas dari stage1_k_ranked.csv
-    berdasarkan urutan rank_k.
-    """
-    df_ranked = pd.read_csv("stage1_k_ranked.csv")
+    # Membaca 5 nilai K teratas dari stage1_k_ranked.csv berdasarkan urutan rank_k.
+    df_ranked = pd.read_csv("stage1_k_ranked(2).csv")
     top5_k = df_ranked.sort_values("rank_k").head(5)["K"].tolist()
     return top5_k
+"""
 
 
 # =========================================================
-# 4. EVALUASI BASELINE BM25
+# EVALUASI BASELINE BM25
 # =========================================================
 
 def evaluate_bm25_for_k(k):
@@ -191,9 +189,8 @@ def evaluate_bm25_for_k(k):
 
 
 # =========================================================
-# 5. EVALUASI HYBRID UNTUK SEMUA KOMBINASI PARAMETER
+# EVALUASI HYBRID UNTUK SEMUA KOMBINASI PARAMETER
 # =========================================================
-
 def evaluate_hybrid_for_k(k):
     """
     Evaluasi hybrid untuk satu nilai K dan semua kombinasi parameter.
@@ -240,9 +237,8 @@ def evaluate_hybrid_for_k(k):
 
 
 # =========================================================
-# 6. BANGUN OUTPUT SUMMARY, COMPARISON, ELIGIBLE, RANKED
+# OUTPUT SUMMARY, COMPARISON, ELIGIBLE, RANKED
 # =========================================================
-
 def build_stage2_outputs(df_baseline_all, df_hybrid_all):
     """
     Menghasilkan 4 output akhir Stage 2:
@@ -299,38 +295,23 @@ def build_stage2_outputs(df_baseline_all, df_hybrid_all):
     # Kandidat kombinasi yang lolos aturan minimum
     # -----------------------------------------------------
     eligible = comparison[
-        (comparison["Fairness"] >= 0.40) &
         (comparison["Precision"] >= comparison["Precision_bm25"] - 0.05) &
-        (comparison["NDCG"] >= comparison["NDCG_bm25"] - 0.03)
+        (comparison["NDCG"] >= comparison["NDCG_bm25"] - 0.03) &
+        (comparison["Fairness"] >= 0.40)
     ].copy()
 
     # -----------------------------------------------------
     # RANKED
     # Semua kombinasi parameter diurutkan
     # -----------------------------------------------------
-    ranked = comparison.copy()
-
-    ranked["is_eligible"] = (
-        (ranked["Fairness"] >= 0.40) &
-        (ranked["Precision"] >= ranked["Precision_bm25"] - 0.05) &
-        (ranked["NDCG"] >= ranked["NDCG_bm25"] - 0.03)
-    )
-
-    # Ranking global:
-    # 1. yang eligible ditaruh di atas
-    # 2. precision tinggi
-    # 3. fairness tinggi
-    # 4. ndcg tinggi
-    # 5. exposure disparity rendah
-    ranked = ranked.sort_values(
+    ranked = eligible.sort_values(
         by=[
-            "is_eligible",
             "Precision",
             "Fairness",
             "NDCG",
             "ExposureDisparity"
         ],
-        ascending=[False, False, False, False, True]
+        ascending=[False, False, False, True]
     ).reset_index(drop=True)
 
     ranked["rank_param"] = range(1, len(ranked) + 1)
@@ -339,27 +320,13 @@ def build_stage2_outputs(df_baseline_all, df_hybrid_all):
 
 
 # =========================================================
-# 7. MAIN
+# MAIN
 # =========================================================
-
 if __name__ == "__main__":
-    top5_k = load_top5_k()
-    print("Top 5 K dari Stage 1:", top5_k)
+    print(f"Evaluasi Stage 2 dengan K_FINAL = {K_FINAL}")
 
-    baseline_frames = []
-    hybrid_frames = []
-
-    for k in top5_k:
-        print(f"\nEvaluasi Stage 2 untuk K={k}")
-
-        df_bm25_k = evaluate_bm25_for_k(k)
-        df_hybrid_k = evaluate_hybrid_for_k(k)
-
-        baseline_frames.append(df_bm25_k)
-        hybrid_frames.append(df_hybrid_k)
-
-    df_baseline_all = pd.concat(baseline_frames, ignore_index=True)
-    df_hybrid_all = pd.concat(hybrid_frames, ignore_index=True)
+    df_baseline_all = evaluate_bm25_for_k(K_FINAL)
+    df_hybrid_all = evaluate_hybrid_for_k(K_FINAL)
 
     summary, comparison, eligible, ranked = build_stage2_outputs(
         df_baseline_all,
@@ -367,10 +334,10 @@ if __name__ == "__main__":
     )
 
     # Simpan hanya 4 file utama
-    summary.to_csv("stage2_param_summary.csv", index=False)
-    comparison.to_csv("stage2_param_comparison.csv", index=False)
-    eligible.to_csv("stage2_param_eligible.csv", index=False)
-    ranked.to_csv("stage2_param_ranked.csv", index=False)
+    summary.to_csv("stage2_param_summary(k=50).csv", index=False)
+    comparison.to_csv("stage2_param_comparison(k=50).csv", index=False)
+    eligible.to_csv("stage2_param_eligible(k=50).csv", index=False)
+    ranked.to_csv("stage2_param_ranked(k=50).csv", index=False)
 
     print("\n===== STAGE 2 SUMMARY =====")
     print(summary)
