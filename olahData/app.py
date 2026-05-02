@@ -1,4 +1,4 @@
-from olahData.reranking.hybrid_rerank import balanced_hybrid_search
+from reranking.hybrid_rerank import balanced_hybrid_search
 
 OUT_COLS = [
     "id", "name", "url",

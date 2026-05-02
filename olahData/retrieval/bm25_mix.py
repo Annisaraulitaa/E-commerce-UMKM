@@ -12,24 +12,22 @@ from rank_bm25 import BM25Okapi
 # =========================================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# path dataset utama yang akan dipakai
 CSV_PATH = os.path.join(BASE_DIR, "nondup_labeled_dataset(new).csv")
 
 ENCODING = "utf-8"
 K = 40
-N_CANDIDATES = 2000   # 1-3% dari total dataset, sesuai proposal
+N_CANDIDATES = 2000   # fixed top-n
+N_CANDIDATES_MAX = 5000   # cap untuk adaptive top-n
 
-# kolom teks yang dipakai untuk membangun dokumen BM25
 TEXT_COLS = ["name_clean", "category_clean", "city_clean"]
 
-# kolom yang ingin ditampilkan pada hasil pencarian
 OUT_COLS = [
     "id", "name", "url",
     "category_breadcrumb",
     "price_number", "discountPercentage",
     "ratingAverage", "shop_id", "shop_name",
     "shop_city", "shop_tier", "countSold",
-    "name_clean","has_promo", "umkm_label",
+    "name_clean", "has_promo", "umkm_label",
 ]
 
 
@@ -75,13 +73,11 @@ def tokenize_with_ngrams(text: str, max_n: int = 3):
 def build_document(df: pd.DataFrame) -> pd.Series:
     """
     Membentuk dokumen teks untuk BM25.
+    name_clean diberi bobot lebih besar dengan dimasukkan dua kali.
     """
     parts = [safe_get_col(df, c) for c in TEXT_COLS]
 
-    # parts[0] diasumsikan sebagai name_clean
     doc = parts[0] + " " + parts[0]
-
-    # parts[1:] berisi category_clean dan city_clean
     for p in parts[1:]:
         doc = doc + " " + p
 
@@ -89,9 +85,6 @@ def build_document(df: pd.DataFrame) -> pd.Series:
 
 
 def normalize_minmax(series):
-    """
-    Normalisasi min-max ke rentang 0-1.
-    """
     series = series.fillna(0).astype(float)
     if series.max() == series.min():
         return pd.Series([0.0] * len(series), index=series.index)
@@ -101,28 +94,14 @@ def normalize_minmax(series):
 def flexible_term_filter(df_out, q_unigrams):
     """
     Filter fleksibel berdasarkan jumlah token query.
-
-    Aturan:
-    - Query 1-2 token:
-    semua token harus muncul.
-
-    - Query 3 token:
-    minimal 2 dari 3 token harus muncul.
-
-    - Query > 3 token:
-    minimal n-1 token harus muncul,
-    dengan batas minimum 3 token.
     """
-
     n_terms = len(q_unigrams)
 
     if n_terms == 0:
         return df_out
 
-    if n_terms <= 2:
+    if n_terms <= 3:
         min_match = n_terms
-    elif n_terms == 3:
-        min_match = 2
     else:
         min_match = max(3, n_terms - 1)
 
@@ -138,28 +117,23 @@ def flexible_term_filter(df_out, q_unigrams):
 # =========================================================
 print("Membangun indeks BM25...")
 
-# kolom dokumen gabungan
 df["doc"] = build_document(df)
-
-# simpan unigram dokumen untuk optional AND filter
 df["doc_tokens"] = df["doc"].apply(lambda x: set(basic_tokens(x)))
 
-# tokenisasi corpus
 corpus_tokens = df["doc"].apply(
     lambda x: tokenize_with_ngrams(x, max_n=3)
 ).tolist()
 
-# model BM25 dengan parameter k1=1.5 dan b=0.75 (nilai standar yang cukup umum dipakai)
 bm25 = BM25Okapi(corpus_tokens, k1=1.5, b=0.75)
 
 
 # =========================================================
-# CORE BM25 SCORING
+# CORE RETRIEVAL
 # =========================================================
 def bm25_all_scores(query: str):
     """
-    Menghitung skor BM25 untuk seluruh dokumen.
-    Dipakai sebagai dasar untuk search dan candidate retrieval.
+    Hitung skor BM25 untuk seluruh dokumen.
+    Ini dipakai sebagai dasar baik untuk fixed maupun adaptive retrieval.
     """
     query = str(query).strip()
     if not query:
@@ -172,7 +146,7 @@ def bm25_all_scores(query: str):
     df_out["bm25_score"] = scores
     df_out["bm25_norm"] = normalize_minmax(df_out["bm25_score"])
 
-    # hanya pertahankan dokumen dengan skor positif
+    # hanya simpan dokumen yang benar-benar punya kecocokan
     df_out = df_out[df_out["bm25_score"] > 0]
 
     return df_out.sort_values("bm25_score", ascending=False).reset_index(drop=True)
@@ -188,14 +162,13 @@ def bm25_search(query: str, topk: int = K, use_term_filter: bool = False):
     query = str(query).strip()
     if not query:
         return pd.DataFrame(columns=OUT_COLS + ["bm25_score", "bm25_norm"])
-    
+
     q_unigrams = basic_tokens(query)
     df_out = bm25_all_scores(query)
 
     if df_out.empty:
         return pd.DataFrame(columns=OUT_COLS + ["bm25_score", "bm25_norm"])
 
-    # filter token opsional untuk query panjang
     if use_term_filter and q_unigrams:
         df_out = flexible_term_filter(df_out, q_unigrams)
 
@@ -208,15 +181,14 @@ def bm25_search(query: str, topk: int = K, use_term_filter: bool = False):
 
 
 # =========================================================
-# BM25 CANDIDATES FOR HYBRID
+# FIXED TOP-N CANDIDATES
 # =========================================================
-def bm25_candidates(query: str, top_n: int = N_CANDIDATES):
+def bm25_candidates_fixed(query: str, top_n: int = N_CANDIDATES):
     """
-    Candidate retrieval untuk hybrid.
-    Mengambil top-n kandidat BM25 teratas.
+    Candidate retrieval fixed:
+    ambil top-n kandidat BM25 teratas.
     """
     df_out = bm25_all_scores(query)
-
     if df_out.empty:
         return pd.DataFrame()
 
@@ -224,26 +196,81 @@ def bm25_candidates(query: str, top_n: int = N_CANDIDATES):
 
 
 # =========================================================
+# ADAPTIVE TOP-N CANDIDATES
+# =========================================================
+def bm25_candidates_adaptive(query: str, top_n_max: int = N_CANDIDATES_MAX):
+    """
+    Candidate retrieval adaptif:
+    - ambil semua dokumen dengan bm25_score > 0
+    - lalu batasi maksimum top_n_max
+    """
+    df_out = bm25_all_scores(query)
+    if df_out.empty:
+        return pd.DataFrame()
+
+    actual_pool_size = len(df_out)
+
+    if top_n_max is not None:
+        df_out = df_out.head(top_n_max)
+
+    df_out = df_out.reset_index(drop=True)
+    df_out["adaptive_pool_size_before_cap"] = actual_pool_size
+
+    return df_out
+
+
+# =========================================================
+# DEFAULT CANDIDATE FUNCTION FOR HYBRID
+# =========================================================
+def bm25_candidates(query: str, top_n: int = N_CANDIDATES, mode: str = "fixed", top_n_max: int = N_CANDIDATES_MAX):
+    """
+    Wrapper umum agar hybrid bisa memilih mode retrieval.
+    mode:
+    - 'fixed'
+    - 'adaptive'
+    """
+    if mode == "adaptive":
+        return bm25_candidates_adaptive(query, top_n_max=top_n_max)
+    return bm25_candidates_fixed(query, top_n=top_n)
+
+
+# =========================================================
 # MAIN EXECUTION
 # =========================================================
 if __name__ == "__main__":
-    print("BM25 baseline siap digunakan.")
+    print("BM25 siap digunakan.")
     q = input("Masukkan query: ").strip()
 
+    # hasil baseline BM25
     result = bm25_search(
         q,
         topk=K,
         use_term_filter=True
     )
 
-    print("\n=== HASIL BM25 BASELINE ===")
+    print("\n=== HASIL BM25 SEARCH ===")
     print(result.to_string(index=False))
 
-    result.to_csv("bm25_results_final.csv", index=False, encoding="utf-8-sig")
-    print("\nDisimpan: bm25_results_final.csv")
+    result.to_csv("bm25_results.csv", index=False, encoding="utf-8-sig")
+    print("\nDisimpan: bm25_results.csv")
 
-    candidates = bm25_candidates(q, top_n=N_CANDIDATES)
-    print(f"\nJumlah candidate pool untuk hybrid: {len(candidates)}")
+    # contoh fixed candidates
+    fixed_candidates = bm25_candidates_fixed(q, top_n=N_CANDIDATES)
+    print(f"\nJumlah fixed candidates: {len(fixed_candidates)}")
 
-    candidates.to_csv("bm25_candidates_final.csv", index=False, encoding="utf-8-sig")
-    print("Disimpan: bm25_candidates_final.csv")
+    # contoh adaptive candidates
+    adaptive_candidates = bm25_candidates_adaptive(q, top_n_max=N_CANDIDATES_MAX)
+    if not adaptive_candidates.empty and "adaptive_pool_size_before_cap" in adaptive_candidates.columns:
+        actual_size = adaptive_candidates["adaptive_pool_size_before_cap"].iloc[0]
+    else:
+        actual_size = 0
+
+    print(f"Jumlah adaptive candidates setelah cap : {len(adaptive_candidates)}")
+    print(f"Jumlah adaptive candidates sebelum cap: {actual_size}")
+
+    fixed_candidates.to_csv("bm25_candidates_fixed.csv", index=False, encoding="utf-8-sig")
+    adaptive_candidates.to_csv("bm25_candidates_adaptive.csv", index=False, encoding="utf-8-sig")
+
+    print("\nDisimpan:")
+    print("- bm25_candidates_fixed.csv")
+    print("- bm25_candidates_adaptive.csv")
