@@ -1,6 +1,7 @@
 # =========================================================
-# IMPORT LIBRARY
+# BM25 BASELINE & CANDIDATE RETRIEVAL
 # =========================================================
+
 import os
 import re
 import pandas as pd
@@ -11,18 +12,19 @@ from rank_bm25 import BM25Okapi
 # KONFIGURASI
 # =========================================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# path dataset utama yang akan dipakai
 CSV_PATH = os.path.join(BASE_DIR, "nondup_labeled_dataset(new).csv")
-
 ENCODING = "utf-8"
-K = 40
-N_CANDIDATES = 2000   # 1-3% dari total dataset, sesuai proposal
 
-# kolom teks yang dipakai untuk membangun dokumen BM25
-TEXT_COLS = ["name_clean", "category_clean", "city_clean"]
+# TOP_K digunakan untuk hasil akhir baseline dan evaluasi metrik @K
+TOP_K = 40
+TOP_N_CANDIDATES = 2000   # 1-3% dari total dataset, sesuai proposal
 
-# kolom yang ingin ditampilkan pada hasil pencarian
+TEXT_COLS = [
+    "name_clean", 
+    "category_clean", 
+    "city_clean"
+]
+
 OUT_COLS = [
     "id", "name", "url",
     "category_breadcrumb",
@@ -56,64 +58,43 @@ def basic_tokens(text: str):
 
 
 def tokenize_with_ngrams(text: str, max_n: int = 3):
-    """
-    Tokenisasi Unigram + Bigram + Trigram
-    """
+    """Tokenisasi Unigram + Bigram + Trigram"""
     toks = basic_tokens(text)
     all_tokens = toks.copy()
 
     for n in range(2, max_n + 1):
-        ngrams = [
-            "_".join(toks[i:i+n])
+        all_tokens.extend(
+            "_".join(toks[i:i + n])
             for i in range(len(toks) - n + 1)
-        ]
-        all_tokens.extend(ngrams)
+        )
 
     return all_tokens
 
 
 def build_document(df: pd.DataFrame) -> pd.Series:
-    """
-    Membentuk dokumen teks untuk BM25.
-    """
-    parts = [safe_get_col(df, c) for c in TEXT_COLS]
+    """Membentuk dokumen teks untuk BM25."""
+    name_clean = safe_get_col(df, "name_clean")
+    category_clean = safe_get_col(df, "category_clean")
+    city_clean = safe_get_col(df, "city_clean")
 
-    # parts[0] diasumsikan sebagai name_clean
-    doc = parts[0] + " " + parts[0]
-
-    # parts[1:] berisi category_clean dan city_clean
-    for p in parts[1:]:
-        doc = doc + " " + p
-
+    doc = name_clean + " " + name_clean + " " + category_clean + " " + city_clean
     return doc.str.strip()
 
 
-def normalize_minmax(series):
-    """
-    Normalisasi min-max ke rentang 0-1.
-    """
+def normalize_minmax(series: pd.Series) -> pd.Series:
+    """Normalisasi min-max ke rentang 0-1."""
     series = series.fillna(0).astype(float)
-    if series.max() == series.min():
+    min_val = series.min()
+    max_val = series.max()
+
+    if max_val == min_val:
         return pd.Series([0.0] * len(series), index=series.index)
-    return (series - series.min()) / (series.max() - series.min())
+
+    return (series - min_val) / (max_val - min_val)
 
 
 def flexible_term_filter(df_out, q_unigrams):
-    """
-    Filter fleksibel berdasarkan jumlah token query.
-
-    Aturan:
-    - Query 1-2 token:
-    semua token harus muncul.
-
-    - Query 3 token:
-    minimal 2 dari 3 token harus muncul.
-
-    - Query > 3 token:
-    minimal n-1 token harus muncul,
-    dengan batas minimum 3 token.
-    """
-
+    """Filter opsional agar hasil tidak terlalu luas."""
     n_terms = len(q_unigrams)
 
     if n_terms == 0:
@@ -129,8 +110,13 @@ def flexible_term_filter(df_out, q_unigrams):
     mask = df_out["doc_tokens"].apply(
         lambda s: sum(t in s for t in q_unigrams) >= min_match
     )
-
     return df_out[mask]
+
+
+def select_output_columns(df_out: pd.DataFrame) -> pd.DataFrame:
+    cols = [c for c in OUT_COLS if c in df_out.columns]
+    cols += ["bm25_score", "bm25_norm"]
+    return df_out[cols].reset_index(drop=True)
 
 
 # =========================================================
@@ -138,25 +124,18 @@ def flexible_term_filter(df_out, q_unigrams):
 # =========================================================
 print("Membangun indeks BM25...")
 
-# kolom dokumen gabungan
 df["doc"] = build_document(df)
-
-# simpan unigram dokumen untuk optional AND filter
 df["doc_tokens"] = df["doc"].apply(lambda x: set(basic_tokens(x)))
 
 # tokenisasi corpus
-corpus_tokens = df["doc"].apply(
-    lambda x: tokenize_with_ngrams(x, max_n=3)
-).tolist()
-
-# model BM25 dengan parameter k1=1.5 dan b=0.75 (nilai standar yang cukup umum dipakai)
+corpus_tokens = df["doc"].apply(lambda x: tokenize_with_ngrams(x, max_n=3)).tolist()
 bm25 = BM25Okapi(corpus_tokens, k1=1.5, b=0.75)
 
 
 # =========================================================
 # CORE BM25 SCORING
 # =========================================================
-def bm25_all_scores(query: str):
+def bm25_all_scores(query: str) -> pd.DataFrame:
     """
     Menghitung skor BM25 untuk seluruh dokumen.
     Dipakai sebagai dasar untuk search dan candidate retrieval.
@@ -170,18 +149,21 @@ def bm25_all_scores(query: str):
 
     df_out = df.copy()
     df_out["bm25_score"] = scores
+    df_out = df_out[df_out["bm25_score"] > 0] # hanya pertahankan dokumen dengan skor positif
+
+    if df_out.empty:
+        return pd.DataFrame()
+    
+    df_out = df_out.sort_values("bm25_score", ascending=False).reset_index(drop=True)
     df_out["bm25_norm"] = normalize_minmax(df_out["bm25_score"])
 
-    # hanya pertahankan dokumen dengan skor positif
-    df_out = df_out[df_out["bm25_score"] > 0]
-
-    return df_out.sort_values("bm25_score", ascending=False).reset_index(drop=True)
+    return df_out
 
 
 # =========================================================
 # BM25 SEARCH (BASELINE)
 # =========================================================
-def bm25_search(query: str, topk: int = K, use_term_filter: bool = False):
+def bm25_search(query: str, topk: int = TOP_K, use_term_filter: bool = False) -> pd.DataFrame:
     """
     BM25 baseline pure relevance.
     """
@@ -189,32 +171,33 @@ def bm25_search(query: str, topk: int = K, use_term_filter: bool = False):
     if not query:
         return pd.DataFrame(columns=OUT_COLS + ["bm25_score", "bm25_norm"])
     
-    q_unigrams = basic_tokens(query)
     df_out = bm25_all_scores(query)
-
+    
     if df_out.empty:
         return pd.DataFrame(columns=OUT_COLS + ["bm25_score", "bm25_norm"])
-
+        
     # filter token opsional untuk query panjang
-    if use_term_filter and q_unigrams:
-        df_out = flexible_term_filter(df_out, q_unigrams)
+    if use_term_filter:
+        df_out = flexible_term_filter(df_out, basic_tokens(query))
+        df_out = df_out.reset_index(drop=True)
 
     df_out = df_out.head(topk)
 
-    cols = [c for c in OUT_COLS if c in df_out.columns]
-    cols += ["bm25_score", "bm25_norm"]
-
-    return df_out[cols].reset_index(drop=True)
+    return df_out.reset_index(drop=True)
 
 
 # =========================================================
 # BM25 CANDIDATES FOR HYBRID
 # =========================================================
-def bm25_candidates(query: str, top_n: int = N_CANDIDATES):
+def bm25_candidates(query: str, top_n: int = TOP_N_CANDIDATES) -> pd.DataFrame:
     """
     Candidate retrieval untuk hybrid.
-    Mengambil top-n kandidat BM25 teratas.
+    Mengambil top-n kandidat BM25 teratas sebelum UMKM filtering dan re-ranking.
     """
+    query = str(query).strip()
+    if not query:
+        return pd.DataFrame()
+
     df_out = bm25_all_scores(query)
 
     if df_out.empty:
@@ -230,20 +213,25 @@ if __name__ == "__main__":
     print("BM25 baseline siap digunakan.")
     q = input("Masukkan query: ").strip()
 
-    result = bm25_search(
+    # 1) Output final baseline
+    baseline_result = bm25_search(
         q,
-        topk=K,
-        use_term_filter=True
+        topk=TOP_K,
+        use_term_filter=False
     )
 
-    print("\n=== HASIL BM25 BASELINE ===")
-    print(result.to_string(index=False))
+    print(f"\n=== HASIL BM25 BASELINE TOP-{TOP_K} ===")
+    print(baseline_result.to_string(index=False))
 
-    result.to_csv("bm25_results_final.csv", index=False, encoding="utf-8-sig")
-    print("\nDisimpan: bm25_results_final.csv")
+    baseline_result.to_csv("bm25_baseline_topk.csv", index=False, encoding="utf-8-sig")
+    print("\nDisimpan: bm25_baseline_topk.csv")
 
-    candidates = bm25_candidates(q, top_n=N_CANDIDATES)
-    print(f"\nJumlah candidate pool untuk hybrid: {len(candidates)}")
+    # 2) Candidate pool BM25 untuk tahap hybrid
+    candidate_pool = bm25_candidates(
+        q, 
+        top_n=TOP_N_CANDIDATES
+    )
 
-    candidates.to_csv("bm25_candidates_final.csv", index=False, encoding="utf-8-sig")
-    print("Disimpan: bm25_candidates_final.csv")
+    print(f"\nJumlah candidate pool untuk hybrid: {len(candidate_pool)}")
+    candidate_pool.to_csv("bm25_candidates_topn.csv", index=False, encoding="utf-8-sig")
+    print("Disimpan: bm25_candidates_topn.csv")
