@@ -8,7 +8,7 @@ def precision_at_k(labels, k):
     labels = labels[:k]
     if k == 0:
         return 0.0
-    return float(np.sum(labels) / k)
+    return float(np.sum(labels) / total_relevant)
 
 
 def recall_at_k(labels, total_relevant, k):
