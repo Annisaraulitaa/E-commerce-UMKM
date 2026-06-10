@@ -45,14 +45,14 @@ SELECTED_POPULARITY_FEATURES = ["countSold", "totalRating"]
 SELECTED_VALUE_ID = "G3_ratingAverage_discountPercentage"
 SELECTED_VALUE_FEATURES = ["ratingAverage", "discountPercentage"]
 
-SELECTED_BASE_SCENARIO = "popularity_dominant_no_fairness"
+SELECTED_BASE_SCENARIO = "relevance_dominant_no_fairness"
 BASE_WEIGHT = {
-    "alpha": 0.25,
-    "beta": 0.50,
+    "alpha": 0.50,
+    "beta": 0.25,
     "gamma": 0.25,
 }
 
-FAIRNESS_LAMBDAS = [0.00, 0.10, 0.20, 0.25, 0.50]
+FAIRNESS_LAMBDAS = [0.10, 0.20, 0.30, 0.40, 0.50]
 
 
 # ============================================================

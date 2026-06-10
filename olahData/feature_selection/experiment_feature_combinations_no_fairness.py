@@ -28,7 +28,7 @@ import pandas as pd
 INPUT_CSV = "manual_labeling_top30_labeled.csv"
 OUTPUT_DIR = "output_experiment_feature_combination_no_fairness"
 
-K_VALUES = [5, 10, 15, 20, 25]
+K_VALUES = [5, 10, 15, 20, 25, 30, 35]
 
 POPULARITY_CANDIDATES = {
     "B1_countSold": ["countSold"],
@@ -179,12 +179,6 @@ def confusion_at_k(
         FP = jumlah dokumen tidak relevan di top-K
         FN = jumlah dokumen relevan yang TIDAK masuk top-K
         FN = total_relevant - TP
-
-    Catatan:
-        - binary_labels harus sudah berupa array 0/1 (bukan graded).
-        - Pastikan k <= len(binary_labels) agar top-K valid.
-        - FN tidak bisa negatif (terjadi jika total_relevant < TP
-        karena ketidakkonsistenan data — diproteksi dengan max(0, ...).
     """
     eff_k = min(k, len(binary_labels))
     top_k = binary_labels[:eff_k]
@@ -215,14 +209,6 @@ def recall_at_k(binary_labels: np.ndarray, total_relevant: int, k: int) -> float
 
 
 def ndcg_at_k(graded_labels: np.ndarray, k: int) -> float:
-    """
-    NDCG@K dengan gain standar: gain(rel) = 2^rel - 1
-
-    Formula standar:
-        DCG@K  = Σ (2^rel_i - 1) / log2(i + 1)
-        IDCG@K = DCG dari ranking ideal
-        NDCG@K = DCG@K / IDCG@K
-    """
     eff_k = min(k, len(graded_labels))
     top_k = graded_labels[:eff_k]
     ideal = np.sort(graded_labels)[::-1][:eff_k]

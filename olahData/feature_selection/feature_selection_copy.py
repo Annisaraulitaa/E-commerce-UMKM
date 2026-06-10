@@ -27,7 +27,7 @@ import pandas as pd
 # ============================================================
 # Konfigurasi kandidat fitur per komponen
 # ============================================================
-POPULARITY_RAW = ["countSold", "countReview", "totalRating"]
+POPULARITY_RAW = ["countSold", "countReview", "totalRating", "price_number"]
 VALUE_RAW = ["ratingAverage", "discountPercentage"]
 UMKM_CANDIDATES = ["umkm_label"]
 ALPHA_CANDIDATES = ["bm25_score"]
