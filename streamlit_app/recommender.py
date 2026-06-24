@@ -34,7 +34,8 @@ class UMKMRecommender:
         weight_relevance=0.50,
         weight_popularity=0.20,
         weight_value=0.20,
-        weight_umkm=0.10
+        weight_umkm=0.10,
+        first_umkm_quota=60
     ):
         query_tokens = tokenize(query)
 
@@ -46,10 +47,15 @@ class UMKMRecommender:
         result = self.df.copy()
         result["bm25_score"] = bm25_scores
 
+        result = result[result["bm25_score"] > 0]
+
+        if result.empty:
+            return pd.DataFrame()
+
         result = result.sort_values(
             "bm25_score",
             ascending=False
-        ).head(200)
+        ).head(top_n)
 
         result["relevance_score"] = self.normalize_score(result["bm25_score"])
 
@@ -86,9 +92,21 @@ class UMKMRecommender:
             weight_umkm * result["umkm_score"]
         ) / total_weight
 
-        result = result.sort_values(
-            "final_score",
-            ascending=False
-        ).head(top_n)
+        # Urutkan semua kandidat berdasarkan final_score
+        result = result.sort_values("final_score", ascending=False)
+
+        # Ambil produk UMKM yang relevan untuk mengisi 60 produk pertama
+        umkm_first = result[result["umkm_binary"] == 1].head(first_umkm_quota)
+
+        # Ambil sisa produk selain yang sudah masuk 60 pertama
+        remaining = result.drop(index=umkm_first.index)
+
+        # Gabungkan:
+        # 1. UMKM relevan di posisi awal
+        # 2. sisanya campuran UMKM dan NON-UMKM berdasarkan final_score
+        result = pd.concat([umkm_first, remaining], axis=0)
+
+        # Batasi sesuai top_n / seluruh produk relevan
+        result = result.head(top_n)
 
         return result
