@@ -29,18 +29,20 @@ import pandas as pd
 # KONFIGURASI
 # ============================================================
 
-INPUT_CSV = "manual_labeling_top30_labeled.csv"
+INPUT_CSV = "manual_labeling_multi_hybrid_final_labeled_10_queries.csv"
 OUTPUT_DIR = "output_experiment_fairness_lambda"
 
-K_VALUES = [5, 10, 15, 20, 25]
+K_VALUES = [10, 20, 30, 40, 45, 50, 60]
+
+SELECTED_SOURCE_MODEL = "relevance"
 
 
 # ============================================================
 # FITUR DAN SKENARIO TERPILIH
 # ============================================================
 
-SELECTED_POPULARITY_ID = "B5_countSold_totalRating"
-SELECTED_POPULARITY_FEATURES = ["countSold", "totalRating"]
+SELECTED_POPULARITY_ID = "B7_countSold_countReview_totalRating"
+SELECTED_POPULARITY_FEATURES = ["countSold", "countReview", "totalRating"]
 
 SELECTED_VALUE_ID = "G3_ratingAverage_discountPercentage"
 SELECTED_VALUE_FEATURES = ["ratingAverage", "discountPercentage"]
@@ -267,6 +269,15 @@ def run_experiment() -> None:
     df, sep = read_csv_auto(INPUT_CSV)
     df = prepare_features(df)
 
+    if "model" in df.columns:
+        df["source_model"] = df["model"].astype(str).str.strip()
+    else:
+        df["source_model"] = "single_pool"
+
+    df = df[df["source_model"].eq(SELECTED_SOURCE_MODEL)].copy()
+    if df.empty:
+        raise ValueError(f"Source model tidak ditemukan: {SELECTED_SOURCE_MODEL}")
+
     pop_id = SELECTED_POPULARITY_ID
     value_id = SELECTED_VALUE_ID
     scenario = SELECTED_BASE_SCENARIO
@@ -279,6 +290,7 @@ def run_experiment() -> None:
     print(f"Shape      : {df.shape}")
     print(f"Sep        : {repr(sep)}")
     print(f"Output     : {output_dir}")
+    print(f"Source     : {SELECTED_SOURCE_MODEL}")
     print(f"Popularity : {pop_id} -> {' + '.join(pop_features)}")
     print(f"Value      : {value_id} -> {' + '.join(value_features)}")
     print(f"Scenario   : {scenario}")
@@ -309,7 +321,7 @@ def run_experiment() -> None:
 
         query_metric_rows = []
 
-        for query, group in temp.groupby("query"):
+        for (query, source_model), group in temp.groupby(["query", "source_model"], sort=False):
             ranked = group.sort_values("final_score", ascending=False).copy()
             metrics = evaluate_group(ranked)
 
@@ -317,6 +329,9 @@ def run_experiment() -> None:
                 "experiment_id": experiment_id,
                 "experiment_name": exp_name,
                 "query": query,
+                "source_model": source_model,
+                "candidate_count": len(ranked),
+                "total_relevant_in_model": int((ranked["_relevance"] >= 1).sum()),
                 "popularity_id": pop_id,
                 "popularity_features": " + ".join(pop_features),
                 "value_id": value_id,
@@ -330,13 +345,14 @@ def run_experiment() -> None:
             }
 
             per_query_rows.append(row)
-            query_metric_rows.append(metrics)
+            query_metric_rows.append(row)
 
             top = ranked.head(max(K_VALUES)).copy()
             top["experiment_id"] = experiment_id
             top["experiment_name"] = exp_name
             top["scenario"] = scenario
             top["lambda"] = lambda_value
+            top["source_model"] = source_model
             top["rank"] = np.arange(1, len(top) + 1)
 
             keep_cols = [
@@ -344,6 +360,7 @@ def run_experiment() -> None:
                 "experiment_name",
                 "scenario",
                 "lambda",
+                "source_model",
                 "query",
                 "rank",
                 "id",
@@ -364,24 +381,33 @@ def run_experiment() -> None:
             topk_rows.append(top[keep_cols])
 
         metrics_df = pd.DataFrame(query_metric_rows)
+        metric_cols = [
+            c for c in metrics_df.columns
+            if c.startswith(("tp@", "fp@", "fn@", "precision@", "recall@", "ndcg@", "fairness@", "f1@"))
+        ]
 
-        summary = {
-            "experiment_id": experiment_id,
-            "experiment_name": exp_name,
-            "popularity_id": pop_id,
-            "popularity_features": " + ".join(pop_features),
-            "value_id": value_id,
-            "value_features": " + ".join(value_features),
-            "scenario": scenario,
-            "alpha": base_weight["alpha"],
-            "beta": base_weight["beta"],
-            "gamma": base_weight["gamma"],
-            "lambda": lambda_value,
-        }
-        for col in metrics_df.columns:
-            summary[f"mean_{col}"] = metrics_df[col].mean()
+        for source_model, model_metrics_df in metrics_df.groupby("source_model", sort=False):
+            summary = {
+                "experiment_id": experiment_id,
+                "experiment_name": exp_name,
+                "source_model": source_model,
+                "num_queries": model_metrics_df["query"].nunique(),
+                "mean_candidate_count": model_metrics_df["candidate_count"].mean(),
+                "mean_total_relevant_in_model": model_metrics_df["total_relevant_in_model"].mean(),
+                "popularity_id": pop_id,
+                "popularity_features": " + ".join(pop_features),
+                "value_id": value_id,
+                "value_features": " + ".join(value_features),
+                "scenario": scenario,
+                "alpha": base_weight["alpha"],
+                "beta": base_weight["beta"],
+                "gamma": base_weight["gamma"],
+                "lambda": lambda_value,
+            }
+            for col in metric_cols:
+                summary[f"mean_{col}"] = model_metrics_df[col].mean()
 
-        summary_rows.append(summary)
+            summary_rows.append(summary)
 
     summary_df = pd.DataFrame(summary_rows)
     per_query_df = pd.DataFrame(per_query_rows)
