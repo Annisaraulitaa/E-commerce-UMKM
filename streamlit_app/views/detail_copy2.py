@@ -472,22 +472,7 @@ def render_detail_product(product):
 
     if st.button("Kembali", icon=":material/chevron_left:"):
         st.session_state.current_page = "Beranda"
-        st.session_state.selected_product = None
-
-        last_query = st.query_params.get("q", st.session_state.get("catalog_query", ""))
-        last_filter = st.query_params.get("catalog_filter", st.session_state.get("catalog_filter", "Semua"))
-
-        st.query_params.clear()
         st.query_params["page"] = "Beranda"
-
-        if last_query:
-            st.query_params["q"] = last_query
-            st.session_state.catalog_query = last_query
-
-        if last_filter:
-            st.query_params["catalog_filter"] = last_filter
-            st.session_state.catalog_filter = last_filter
-
         st.rerun()
 
 

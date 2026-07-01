@@ -56,26 +56,6 @@ def format_sold(value):
     return str(n)
 
 
-def _placeholder_image_data_uri(name="-", category="-"):
-    svg = f"""
-    <svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800">
-        <rect width="800" height="800" rx="36" fill="#f8fafc"/>
-        <rect x="90" y="120" width="620" height="420" rx="28" fill="#e2e8f0"/>
-        <circle cx="285" cy="260" r="58" fill="#cbd5e1"/>
-        <path d="M150 500 L335 340 L450 445 L535 365 L650 500 Z" fill="#cbd5e1"/>
-        <text x="400" y="610" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="#334155">
-            Gambar Produk
-        </text>
-        <text x="400" y="660" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#64748b">
-            Tidak tersedia
-        </text>
-    </svg>
-    """
-
-    encoded = base64.b64encode(svg.encode("utf-8")).decode("utf-8")
-    return f"data:image/svg+xml;base64,{encoded}"
-
-
 def render_detail_product(product):
     if product is None:
         st.warning("Produk belum dipilih.")
@@ -229,7 +209,7 @@ def render_detail_product(product):
             min-width: 70px !important;
             height: 40px !important;
             min-height: 40px !important;
-            padding: 0px 10px 0px 5px !important;
+            padding: 0px 10px 0px 8px !important;
 
             display: inline-flex !important;
             flex-direction: row !important;
@@ -291,7 +271,7 @@ def render_detail_product(product):
         .product-image-card {
             background: #ffffff;
             border: 1px solid #e5e7eb;
-            border-radius: 5px;
+            border-radius: 0px;
             padding: 3px;
             min-height: auto;
             display: flex;
@@ -424,19 +404,17 @@ def render_detail_product(product):
             align-items: center;
             justify-content: center;
             min-height: 44px;
-            border: 1px solid #93c5fd;
+            border: 1px solid #d1d5db;
             border-radius: 11px;
             background: #ffffff;
-            color: #2563eb !important;
+            color: #0f172a !important;
             font-size: 15px;
             font-weight: 700;
             text-decoration: none !important;
             transition: all 0.18s ease;
         }
-        
-        .market-action:hover,
-        .market-action:focus,
-        .market-action:active {
+
+        .market-action:hover {
             border-color: #2563eb;
             color: #2563eb !important;
             background: #eff6ff;
@@ -471,23 +449,8 @@ def render_detail_product(product):
     )
 
     if st.button("Kembali", icon=":material/chevron_left:"):
-        st.session_state.current_page = "Beranda"
-        st.session_state.selected_product = None
-
-        last_query = st.query_params.get("q", st.session_state.get("catalog_query", ""))
-        last_filter = st.query_params.get("catalog_filter", st.session_state.get("catalog_filter", "Semua"))
-
-        st.query_params.clear()
-        st.query_params["page"] = "Beranda"
-
-        if last_query:
-            st.query_params["q"] = last_query
-            st.session_state.catalog_query = last_query
-
-        if last_filter:
-            st.query_params["catalog_filter"] = last_filter
-            st.session_state.catalog_filter = last_filter
-
+        st.session_state.current_page = "Katalog Produk"
+        st.query_params["page"] = "Katalog Produk"
         st.rerun()
 
 
@@ -506,28 +469,46 @@ def render_detail_product(product):
     col_img, col_info = st.columns([1.00, 1.20], gap="medium")
 
     with col_img:
-        try:
-            if image_path is not None:
+        if image_path is not None:
+            try:
                 image_src = _image_to_data_uri(image_path)
-            else:
-                image_src = _placeholder_image_data_uri(name, category)
-        except Exception:
-            image_src = _placeholder_image_data_uri(name, category)
+                image_parts = [
+                    '<div class="product-image-card">',
+                    f'<img src="{image_src}" alt="{name}">',
+                    '</div>',
+                ]
 
-        image_parts = [
-            '<div class="product-image-card">',
-            f'<img src="{image_src}" alt="{name}">',
-            '</div>',
-        ]
+                if discount_note_html:
+                    image_parts.extend([
+                        '<div class="image-discount-note">',
+                        discount_note_html,
+                        '</div>',
+                    ])
 
-        if discount_note_html:
-            image_parts.extend([
-                '<div class="image-discount-note">',
-                discount_note_html,
+                _html(image_parts)
+            except Exception:
+                st.image(str(image_path), use_container_width=True)
+                if discount_note_html:
+                    _html([
+                        '<div class="image-discount-note">',
+                        discount_note_html,
+                        '</div>',
+                    ])
+        else:
+            empty_parts = [
+                '<div class="detail-empty-image">',
+                'Gambar tidak tersedia',
                 '</div>',
-            ])
+            ]
 
-        _html(image_parts)
+            if discount_note_html:
+                empty_parts.extend([
+                    '<div class="image-discount-note">',
+                    discount_note_html,
+                    '</div>',
+                ])
+
+            _html(empty_parts)
 
     with col_info:
         _html([
@@ -566,12 +547,12 @@ def render_detail_product(product):
         ])
 
         buy_button = (
-            f'<a class="market-action" href="{html.escape(product_url)}" target="_blank" rel="noopener noreferrer">🛒 Beli Sekarang</a>'
+            f'<a class="market-action" href="{html.escape(product_url)}" target="_blank" rel="noopener noreferrer">Beli Sekarang</a>'
             if product_url
             else '<span class="market-action disabled">Beli Sekarang</span>'
         )
         shop_button = (
-            f'<a class="market-action" href="{html.escape(shop_url)}" target="_blank" rel="noopener noreferrer">🏪 Kunjungi Toko</a>'
+            f'<a class="market-action" href="{html.escape(shop_url)}" target="_blank" rel="noopener noreferrer">Kunjungi Toko</a>'
             if shop_url
             else '<span class="market-action disabled">Kunjungi Toko</span>'
         )

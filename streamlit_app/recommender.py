@@ -2,6 +2,21 @@ import numpy as np
 import pandas as pd
 from rank_bm25 import BM25Okapi
 
+from config import (
+    TOP_N_CANDIDATES,
+    TOP_K_RESULTS,
+    FIRST_UMKM_QUOTA,
+    WEIGHT_RELEVANCE,
+    WEIGHT_POPULARITY,
+    WEIGHT_VALUE,
+    WEIGHT_UMKM,
+    POPULARITY_SOLD_WEIGHT,
+    POPULARITY_REVIEW_WEIGHT,
+    POPULARITY_TOTAL_RATING_WEIGHT,
+    VALUE_RATING_WEIGHT,
+    VALUE_DISCOUNT_WEIGHT,
+)
+
 from preprocessing_streamlit import tokenize
 
 
@@ -19,6 +34,8 @@ class UMKMRecommender:
         self.bm25 = BM25Okapi(self.tokenized_corpus)
 
     def normalize_score(self, series):
+        series = pd.to_numeric(series, errors="coerce").fillna(0)
+
         min_val = series.min()
         max_val = series.max()
 
@@ -27,16 +44,32 @@ class UMKMRecommender:
 
         return (series - min_val) / (max_val - min_val)
 
+    def safe_numeric(self, df, col):
+        if col not in df.columns:
+            return pd.Series([0] * len(df), index=df.index)
+
+        return pd.to_numeric(df[col], errors="coerce").fillna(0)
+
     def search(
         self,
         query,
-        top_n=10,
-        weight_relevance=0.50,
-        weight_popularity=0.20,
-        weight_value=0.20,
-        weight_umkm=0.10,
-        first_umkm_quota=60
+        top_n=None,
+        top_n_candidates=TOP_N_CANDIDATES,
+        top_k_results=TOP_K_RESULTS,
+        weight_relevance=WEIGHT_RELEVANCE,
+        weight_popularity=WEIGHT_POPULARITY,
+        weight_value=WEIGHT_VALUE,
+        weight_umkm=WEIGHT_UMKM,
+        first_umkm_quota=FIRST_UMKM_QUOTA,
+        popularity_sold_weight=POPULARITY_SOLD_WEIGHT,
+        popularity_review_weight=POPULARITY_REVIEW_WEIGHT,
+        popularity_total_rating_weight=POPULARITY_TOTAL_RATING_WEIGHT,
+        value_rating_weight=VALUE_RATING_WEIGHT,
+        value_discount_weight=VALUE_DISCOUNT_WEIGHT,
     ):
+        if top_n is not None:
+            top_k_results = top_n
+
         query_tokens = tokenize(query)
 
         if len(query_tokens) == 0:
@@ -52,61 +85,84 @@ class UMKMRecommender:
         if result.empty:
             return pd.DataFrame()
 
+        # Candidate retrieval dari BM25
         result = result.sort_values(
             "bm25_score",
             ascending=False
-        ).head(top_n)
+        ).head(top_n_candidates)
 
+        # =====================================================
+        # 1. Relevance Score
+        # =====================================================
         result["relevance_score"] = self.normalize_score(result["bm25_score"])
 
-        result["popularity_raw"] = (
-            result["countSold"].fillna(0) +
-            result["countReview"].fillna(0)
+        # =====================================================
+        # 2. Popularity Score
+        # countSold lebih besar karena lebih mewakili transaksi/minat pasar
+        # =====================================================
+        count_sold = self.safe_numeric(result, "countSold")
+        count_review = self.safe_numeric(result, "countReview")
+        total_rating = self.safe_numeric(result, "totalRating")
+
+        result["countSold_norm"] = self.normalize_score(np.log1p(count_sold))
+        result["countReview_norm"] = self.normalize_score(np.log1p(count_review))
+        result["totalRating_norm"] = self.normalize_score(np.log1p(total_rating))
+
+        result["popularity_score"] = (
+            popularity_sold_weight * result["countSold_norm"] +
+            popularity_review_weight * result["countReview_norm"] +
+            popularity_total_rating_weight * result["totalRating_norm"]
         )
 
-        result["popularity_score"] = self.normalize_score(result["popularity_raw"])
+        # =====================================================
+        # 3. Value Score
+        # ratingAverage lebih besar karena lebih mewakili kualitas produk
+        # =====================================================
+        rating = self.safe_numeric(result, "ratingAverage")
+        discount = self.safe_numeric(result, "discountPercentage")
 
-        result["value_raw"] = (
-            result["ratingAverage"].fillna(0) +
-            result["discountPercentage"].fillna(0) / 100
+        result["rating_norm"] = self.normalize_score(rating)
+        result["discount_norm"] = self.normalize_score(discount)
+
+        result["value_score"] = (
+            value_rating_weight * result["rating_norm"] +
+            value_discount_weight * result["discount_norm"]
         )
 
-        result["value_score"] = self.normalize_score(result["value_raw"])
-
-        result["umkm_score"] = result["umkm_binary"].astype(int)
-
-        total_weight = (
-            weight_relevance +
-            weight_popularity +
-            weight_value +
-            weight_umkm
-        )
-
-        if total_weight == 0:
-            total_weight = 1
-
-        result["final_score"] = (
+        # =====================================================
+        # 4. Base Score
+        # relevance_dominant: alpha=0.50, beta=0.25, gamma=0.25
+        # =====================================================
+        result["base_score"] = (
             weight_relevance * result["relevance_score"] +
             weight_popularity * result["popularity_score"] +
-            weight_value * result["value_score"] +
-            weight_umkm * result["umkm_score"]
-        ) / total_weight
+            weight_value * result["value_score"]
+        )
 
-        # Urutkan semua kandidat berdasarkan final_score
+        # =====================================================
+        # 5. Fairness Boost
+        # lambda_umkm = 0.20
+        # =====================================================
+        result["umkm_score"] = result["umkm_binary"].astype(int)
+
+        result["final_score"] = (
+            result["base_score"] +
+            weight_umkm * result["umkm_score"]
+        ).clip(0.0, 1.0)
+
+        # Urutkan kandidat berdasarkan final_score
         result = result.sort_values("final_score", ascending=False)
 
-        # Ambil produk UMKM yang relevan untuk mengisi 60 produk pertama
+        # =====================================================
+        # 6. UMKM-first untuk memenuhi K=60 pertama
+        # =====================================================
         umkm_first = result[result["umkm_binary"] == 1].head(first_umkm_quota)
 
-        # Ambil sisa produk selain yang sudah masuk 60 pertama
         remaining = result.drop(index=umkm_first.index)
 
-        # Gabungkan:
-        # 1. UMKM relevan di posisi awal
-        # 2. sisanya campuran UMKM dan NON-UMKM berdasarkan final_score
         result = pd.concat([umkm_first, remaining], axis=0)
 
-        # Batasi sesuai top_n / seluruh produk relevan
-        result = result.head(top_n)
+        result = result.head(top_k_results).reset_index(drop=True)
+        result["final_rank"] = np.arange(1, len(result) + 1)
 
         return result

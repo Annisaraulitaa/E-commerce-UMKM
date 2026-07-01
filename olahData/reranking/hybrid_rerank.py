@@ -11,18 +11,19 @@ from retrieval.bm25 import bm25_candidates, normalize_minmax
 # DEFAULT PARAMETERS 
 # =========================================================
 TOP_N_CANDIDATES = 2000
-TOP_K_RESULTS = 40
+TOP_K_RESULTS = 60
 MIN_UMKM_RATIO = 0.4
 
-ALPHA = 0.6
-BETA = 0.15
+ALPHA = 0.50
+BETA = 0.25
 GAMMA = 0.25
-LAMBDA_UMKM = 0.1
+LAMBDA_UMKM = 0.30
 
-POPULARITY_SOLD_WEIGHT = 0.7
-POPULARITY_REVIEW_WEIGHT = 0.3
-VALUE_RATING_WEIGHT = 0.7
-VALUE_DISCOUNT_WEIGHT = 0.3
+POPULARITY_SOLD_WEIGHT = 0.50
+POPULARITY_REVIEW_WEIGHT = 0.25
+POPULARITY_TOTAL_RATING_WEIGHT = 0.25
+VALUE_RATING_WEIGHT = 0.70
+VALUE_DISCOUNT_WEIGHT = 0.30
 
 
 # =========================================================
@@ -63,6 +64,7 @@ def compute_balanced_hybrid(
     lambda_umkm: float = LAMBDA_UMKM,
     popularity_sold_weight: float = POPULARITY_SOLD_WEIGHT,
     popularity_review_weight: float = POPULARITY_REVIEW_WEIGHT,
+    popularity_total_rating_weight: float = POPULARITY_TOTAL_RATING_WEIGHT,
     value_rating_weight: float = VALUE_RATING_WEIGHT,
     value_discount_weight: float = VALUE_DISCOUNT_WEIGHT
 ) -> pd.DataFrame:
@@ -71,7 +73,7 @@ def compute_balanced_hybrid(
 
     Komponen skor:
     - Relevance  : bm25_norm
-    - Popularity : countSold dan countReview
+    - Popularity : countSold, countReview, dan totalRating
     - Value      : ratingAverage dan discountPercentage
     - UMKM bonus : tambahan skor untuk produk UMKM
     """
@@ -91,13 +93,17 @@ def compute_balanced_hybrid(
     # =====================================================
     count_sold = safe_numeric(df, "countSold")
     count_review = safe_numeric(df, "countReview")
+    total_rating = safe_numeric(df, "totalRating")
 
-    df["popularity_raw"] = (
-        popularity_sold_weight * np.log1p(count_sold) +
-        popularity_review_weight * np.log1p(count_review)
+    df["countSold_norm"] = normalize_minmax(np.log1p(count_sold))
+    df["countReview_norm"] = normalize_minmax(np.log1p(count_review))
+    df["totalRating_norm"] = normalize_minmax(np.log1p(total_rating))
+
+    df["popularity_score"] = (
+        popularity_sold_weight * df["countSold_norm"] +
+        popularity_review_weight * df["countReview_norm"] +
+        popularity_total_rating_weight * df["totalRating_norm"]
     )
-
-    df["popularity_norm"] = normalize_minmax(df["popularity_raw"])
 
     # =====================================================
     # 3. Value Score
@@ -118,16 +124,16 @@ def compute_balanced_hybrid(
     # =====================================================
     df["base_score"] = (
         alpha * df["bm25_norm"] +
-        beta * df["popularity_norm"] +
+        beta * df["popularity_score"] +
         gamma * df["value_score"]
     )
 
     # =====================================================
     # --- Fairness Adjustment ---
     # =====================================================
-    df["final_score"] = df["base_score"] * (
-        1 + lambda_umkm * df["umkm_label"]
-    )
+    df["final_score"] = (
+        df["base_score"] + lambda_umkm * df["umkm_label"]
+    ).clip(0.0, 1.0)
 
     # hasil diurutkan berdasarkan skor akhir tertinggi
     return df.sort_values(
@@ -145,9 +151,9 @@ def apply_umkm_priority_constraint(
 ) -> pd.DataFrame:
     """
     Aturan:
-    1. Prioritaskan UMKM untuk mengisi top-K terlebih dahulu.
-    2. Jika UMKM tidak cukup, isi sisa slot dengan NON_UMKM terbaik.
-    3. min_umkm_ratio tetap dipertahankan sebagai pengaman minimum.
+    1. Prioritaskan produk UMKM untuk masuk ke daftar rekomendasi Top-K.
+    2. Jika produk UMKM tidak cukup, isi sisa slot dengan NON_UMKM terbaik.
+    3. Setelah kandidat Top-K terbentuk, urutkan kembali berdasarkan final_score.
     """
 
     if df_ranked.empty:
@@ -205,18 +211,15 @@ def apply_umkm_priority_constraint(
             final_results = final_results.drop(to_remove_idx, errors="ignore")
             final_results = pd.concat([final_results, to_add], ignore_index=True)
 
-    # Uuran Akhir:
-    # UMKM di atas dulu, masing-masing tetap berdasarkan final_score tertinggi
-    final_results["umkm_priority"] = final_results["umkm_label"]
-
+    # Urutan akhir: ranking biasa berdasarkan final_score.
     final_results = final_results.sort_values(
-        by=["umkm_priority", "final_score"],
-        ascending=[False, False]
+        "final_score",
+        ascending=False
     ).reset_index(drop=True)
 
     final_results["final_rank"] = np.arange(1, len(final_results) + 1)
 
-    return final_results.drop(columns=["umkm_priority"], errors="ignore")
+    return final_results
 
 
 # =========================================================
@@ -233,6 +236,7 @@ def balanced_hybrid_search(
     lambda_umkm: float = LAMBDA_UMKM,
     popularity_sold_weight: float = POPULARITY_SOLD_WEIGHT,
     popularity_review_weight: float = POPULARITY_REVIEW_WEIGHT,
+    popularity_total_rating_weight: float = POPULARITY_TOTAL_RATING_WEIGHT,
     value_rating_weight: float = VALUE_RATING_WEIGHT,
     value_discount_weight: float = VALUE_DISCOUNT_WEIGHT
 ):
@@ -262,6 +266,7 @@ def balanced_hybrid_search(
         lambda_umkm=lambda_umkm,
         popularity_sold_weight=popularity_sold_weight,
         popularity_review_weight=popularity_review_weight,
+        popularity_total_rating_weight=popularity_total_rating_weight,
         value_rating_weight=value_rating_weight,
         value_discount_weight=value_discount_weight
     )
@@ -294,7 +299,12 @@ if __name__ == "__main__":
         alpha=ALPHA,
         beta=BETA,
         gamma=GAMMA,
-        lambda_umkm=LAMBDA_UMKM
+        lambda_umkm=LAMBDA_UMKM,
+        popularity_sold_weight=POPULARITY_SOLD_WEIGHT,
+        popularity_review_weight=POPULARITY_REVIEW_WEIGHT,
+        popularity_total_rating_weight=POPULARITY_TOTAL_RATING_WEIGHT,
+        value_rating_weight=VALUE_RATING_WEIGHT,
+        value_discount_weight=VALUE_DISCOUNT_WEIGHT
     )
 
     print(f"\n=== HASIL HYBRID TOP-{TOP_K_RESULTS} ===")

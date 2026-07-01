@@ -15,10 +15,15 @@ def render_home_page(df):
 
     hero_html = (
         '<div class="hero-section">'
-        '<div class="hero-title">Sistem Informasi Katalog<br>Produk UMKM</div>'
+        '<div class="hero-title">Temukan Produk UMKM Terbaik<br>Untuk Anda</div>'
         '<div class="hero-desc">'
-        'Platform digital yang memfasilitasi penjualan produk UMKM dan Non-UMKM '
-        'dengan sistem katalog modern dan pencarian rekomendasi produk.'
+        'Cari produk UMKM dan non-UMKM dalam satu tempat'
+        '</div>'
+        '<div class="hero-desc">'
+        'Produk UMKM kami tampilkan lebih dulu agar usaha kecil lebih mudah ditemukan'
+        '</div>'
+        '<div class="hero-desc">'
+        '- Cepat, Relevan, dan Adil bagi pelaku usaha kecil'
         '</div>'
         '<div class="hero-actions">'
         f'<a class="hero-primary-btn" href="{catalog_url}" target="_self">Lihat Katalog →</a>'
@@ -34,7 +39,7 @@ def render_home_page(df):
         render_metric_mini("Total Produk", f"{total_products:,}".replace(",", "."))
 
     with col2:
-        render_metric_mini("Produk UMKM", f"{total_umkm:,}".replace(",", "."))
+        render_metric_mini("UMKM", f"{total_umkm:,}".replace(",", "."))
 
     with col3:
         render_metric_mini("Non-UMKM", f"{total_non_umkm:,}".replace(",", "."))
