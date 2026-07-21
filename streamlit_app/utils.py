@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from config import PROJECT_DIR
+from config import PROJECT_DIR, BASE_DIR
 
 
 def get_image_path(image_local_path):
@@ -12,6 +12,18 @@ def get_image_path(image_local_path):
 
     raw_path = str(image_local_path).strip().replace("\\", "/")
 
+    # 1. Kalau path sudah absolute, langsung cek
+    absolute_path = Path(raw_path)
+    if absolute_path.exists():
+        return absolute_path
+
+    # 2. Untuk gambar hasil upload dari form pendaftaran
+    # Contoh: data/submitted_product_images/namafile.jpg
+    candidate_0 = BASE_DIR / raw_path
+    if candidate_0.exists():
+        return candidate_0
+
+    # 3. Untuk gambar dataset utama lama
     candidate_1 = PROJECT_DIR / raw_path
     if candidate_1.exists():
         return candidate_1
@@ -67,3 +79,64 @@ def get_value(row, *keys, default="-"):
         if value is not None and not pd.isna(value) and str(value).strip() != "":
             return value
     return default
+
+
+# ==============================
+# Product Submission Utilities
+# ==============================
+
+SUBMISSION_PATH = BASE_DIR / "data" / "product_submissions.csv"
+
+
+def load_submissions():
+
+    if not SUBMISSION_PATH.exists():
+        return pd.DataFrame()
+
+    return pd.read_csv(
+        SUBMISSION_PATH
+    )
+
+
+def update_submission_status(index, new_status):
+
+    df = load_submissions()
+
+    df.loc[index, "status"] = new_status
+
+    df.to_csv(
+        SUBMISSION_PATH,
+        index=False,
+        encoding="utf-8-sig"
+    )
+
+    return df
+
+
+def get_approved_submissions():
+
+    df = load_submissions()
+
+    if df.empty:
+        return pd.DataFrame()
+
+    return df[
+        df["status"] == "approved"
+    ].copy()
+
+
+def delete_submission(index):
+
+    df = load_submissions()
+
+    if index in df.index:
+
+        df = df.drop(index)
+
+        df.to_csv(
+            SUBMISSION_PATH,
+            index=False,
+            encoding="utf-8-sig"
+        )
+
+    return df

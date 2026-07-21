@@ -558,6 +558,12 @@ def load_css():
             font-weight: 800 !important;
         }
 
+        /* ======= ADMIN PAGE ======= */
+
+        .st-key-admin_page {
+            padding-top: 20px;
+        }
+
         </style>
 
         """,

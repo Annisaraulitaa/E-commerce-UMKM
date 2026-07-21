@@ -9,7 +9,9 @@ from styles import load_css
 from views.about import render_about_page
 from views.catalog import render_catalog_page
 from views.detail import render_detail_product
-
+from views.admin import show_admin_page
+from views.submitted_detail import render_submitted_product_detail
+from submitted_products import load_approved_submitted_products
 
 st.set_page_config(
     page_title="Sistem Rekomendasi Produk UMKM",
@@ -20,6 +22,20 @@ st.set_page_config(
 load_css()
 
 df = load_data()
+
+approved_products = load_approved_submitted_products()
+
+if not approved_products.empty:
+    approved_signature = "|".join(
+        approved_products["id"].astype(str).str.strip().tolist()
+    )
+
+    if st.session_state.get("approved_products_signature") != approved_signature:
+        st.session_state["approved_products_signature"] = approved_signature
+        st.session_state.pop("catalog_initial_products", None)
+
+    df = pd.concat([approved_products, df], ignore_index=True)
+
 recommender = UMKMRecommender(df)
 
 if "visible_count" not in st.session_state:
@@ -44,25 +60,43 @@ if "page" in st.query_params:
     if page_from_url in VALID_PAGES:
         st.session_state.current_page = page_from_url
 
-# Routing detail produk dari klik card.
-# Product card mengirim product_id lewat query params supaya detail tetap bisa dibuka
-# meskipun card dibuat clickable seperti desain Figma.
 if "product_id" in st.query_params:
-    product_id = str(st.query_params.get("product_id"))
-    matched_product = df[df["id"].astype(str) == product_id]
+    product_id = str(st.query_params.get("product_id", "")).strip()
+
+    df["_route_id"] = df["id"].astype(str).str.strip()
+
+    matched_product = df[df["_route_id"] == product_id]
 
     if not matched_product.empty:
         st.session_state.selected_product = matched_product.iloc[0].to_dict()
         st.session_state.current_page = "Detail Produk"
+    else:
+        st.session_state.selected_product = None
+        st.session_state.current_page = "Beranda"
+        st.query_params.clear()
+        st.query_params["page"] = "Beranda"
+        st.session_state.pop("catalog_initial_products", None)
+        st.rerun()
 
-if st.session_state.current_page != "Detail Produk":
+if st.session_state.current_page not in [
+    "Detail Produk",
+    "Admin"
+]:
     render_navbar()
 
 if st.session_state.current_page == "Beranda":
     render_catalog_page(df, recommender)
 
 elif st.session_state.current_page == "Detail Produk":
-    render_detail_product(st.session_state.selected_product)
+    selected_product = st.session_state.selected_product
+
+    if selected_product and selected_product.get("source") == "submission":
+        render_submitted_product_detail(selected_product)
+    else:
+        render_detail_product(selected_product)
 
 elif st.session_state.current_page == "Tentang":
     render_about_page()
+
+elif st.session_state.current_page == "Admin":
+    show_admin_page()

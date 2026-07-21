@@ -6,6 +6,7 @@ import pandas as pd
 import streamlit as st
 
 from components.product_card import render_product_card
+from components.product_registration import render_product_registration_flow
 from config import (
     INITIAL_DISPLAY,
     LOAD_MORE_STEP,
@@ -14,9 +15,15 @@ from config import (
     WEIGHT_UMKM,
     WEIGHT_VALUE,
 )
+from utils import get_approved_submissions
 
 
 FILTER_OPTIONS = ["Semua", "UMKM"]
+
+INITIAL_RANDOM_BATCH_SIZE = INITIAL_DISPLAY
+INITIAL_RANDOM_BATCH_LIMIT = 7
+INITIAL_RANDOM_MAX_DISPLAY = INITIAL_RANDOM_BATCH_SIZE * INITIAL_RANDOM_BATCH_LIMIT
+SEARCH_POOL_SIZE = 300
 
 
 def _html(markup):
@@ -33,18 +40,29 @@ def format_number(value):
 
 def get_umkm_mask(data):
     if data.empty:
-        return pd.Series(dtype=bool)
+        return pd.Series(False, index=data.index)
 
-    if "umkm_binary" in data.columns:
+    if "umkm_label" in data.columns:
         return (
-            pd.to_numeric(data["umkm_binary"], errors="coerce")
+            pd.to_numeric(
+                data["umkm_label"],
+                errors="coerce"
+            )
             .fillna(0)
             .astype(int)
             .eq(1)
         )
 
-    if "umkm_label" in data.columns:
-        return data["umkm_label"].astype(str).str.upper().eq("UMKM")
+    if "umkm_binary" in data.columns:
+        return (
+            pd.to_numeric(
+                data["umkm_binary"],
+                errors="coerce"
+            )
+            .fillna(0)
+            .astype(int)
+            .eq(1)
+        )
 
     return pd.Series(False, index=data.index)
 
@@ -72,7 +90,359 @@ def apply_catalog_filter(data, filter_mode):
     return data
 
 
-def get_initial_products(df, n=INITIAL_DISPLAY):
+def apply_search_sort(data, sort_mode):
+    if data.empty:
+        return data
+
+    result = data.copy()
+
+    if sort_mode == "Terbaru":
+
+        if "shopinfo_open_since" in result.columns:
+            result = result.sort_values(
+                "shopinfo_open_since",
+                ascending=False
+            )
+
+
+    elif sort_mode == "Terlaris":
+
+        if "countSold" in result.columns:
+            result = result.sort_values(
+                "countSold",
+                ascending=False
+            )
+
+
+    elif sort_mode == "Harga Terendah":
+
+        if "price_number" in result.columns:
+            result = result.sort_values(
+                "price_number",
+                ascending=True
+            )
+
+
+    elif sort_mode == "Harga Tertinggi":
+
+        if "price_number" in result.columns:
+            result = result.sort_values(
+                "price_number",
+                ascending=False
+            )
+
+
+    return result.reset_index(drop=True)
+
+
+def render_search_sort():
+
+    options = [
+        "Terkait",
+        "Terbaru",
+        "Terlaris",
+        "Harga Terendah",
+        "Harga Tertinggi",
+    ]
+
+
+    if "sort_mode" not in st.session_state:
+        st.session_state.sort_mode = "Terkait"
+
+    with st.container(key="search_sort"):
+
+        selected = st.radio(
+            "Sort",
+            options,
+            index=options.index(
+                st.session_state.sort_mode
+            ),
+            horizontal=True,
+            label_visibility="collapsed",
+            key="sort_radio"
+        )
+
+
+        st.session_state.sort_mode = selected
+
+
+    return st.session_state.sort_mode
+
+
+def render_search_filter_panel(data):
+
+    filtered = data.copy()
+
+    if "price_min_filter" not in st.session_state:
+        st.session_state.price_min_filter = None
+
+    if "price_max_filter" not in st.session_state:
+        st.session_state.price_max_filter = None
+
+    st.markdown(
+        """
+        <div class="filter-title">
+            FILTER
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+    # ==================
+    # Lokasi
+    # ==================
+
+    if "shop_city" in filtered.columns:
+
+        cities = sorted(
+            filtered["shop_city"]
+            .dropna()
+            .unique()
+            .tolist()
+        )
+
+
+        selected_city = st.multiselect(
+            "Lokasi",
+            cities
+        )
+
+
+        if selected_city:
+            filtered = filtered[
+                filtered["shop_city"].isin(selected_city)
+            ]
+
+
+    # ==================
+    # Level Toko
+    # ==================
+
+    st.markdown(
+        "<div class='filter-section-title'>Level Toko</div>",
+        unsafe_allow_html=True
+    )
+
+
+    seller_options = [
+        "Official Store",
+        "Power Merchant",
+        "Regular Merchant"
+    ]
+
+
+    selected_seller = []
+
+    for seller in seller_options:
+
+        checked = st.checkbox(
+            seller,
+            key=f"seller_{seller}"
+        )
+
+        if checked:
+            selected_seller.append(seller)
+
+
+    if selected_seller and "shopinfo_badge_type" in filtered.columns:
+
+        seller_type = (
+            filtered["shopinfo_badge_type"]
+            .astype(str)
+            .str.upper()
+        )
+
+
+        mask = pd.Series(
+            False,
+            index=filtered.index
+        )
+
+
+        if "Official Store" in selected_seller:
+            mask |= seller_type.eq(
+                "OFFICIAL_STORE"
+            )
+
+
+        if "Power Merchant" in selected_seller:
+            mask |= seller_type.isin(
+                [
+                    "POWER_MERCHANT",
+                    "GOLD_OR_POWER_MERCHANT"
+                ]
+            )
+
+
+        if "Regular Merchant" in selected_seller:
+            mask |= (
+                ~seller_type.isin(
+                    [
+                        "OFFICIAL_STORE",
+                        "POWER_MERCHANT",
+                        "GOLD_OR_POWER_MERCHANT"
+                    ]
+                )
+            )
+
+
+        filtered = filtered[mask]
+
+
+
+    # ==================
+    # Harga
+    # ==================
+
+    st.markdown(
+        "<div class='filter-section-title'>Harga</div>",
+        unsafe_allow_html=True
+    )
+
+
+    price_col1, price_col2 = st.columns(2)
+
+
+    with price_col1:
+        min_price = st.number_input(
+            "Harga Min",
+            min_value=0,
+            value=None,
+            placeholder="Harga Min",
+            label_visibility="collapsed"
+        )
+
+
+    with price_col2:
+        max_price = st.number_input(
+            "Harga Maks",
+            min_value=0,
+            value=None,
+            placeholder="Harga Maks",
+            label_visibility="collapsed"
+        )
+    
+    st.write("")
+
+    if st.button(
+        "PAKAI",
+        use_container_width=True,
+        key="apply_price_filter"
+    ):
+        st.session_state.price_min_filter = min_price
+        st.session_state.price_max_filter = max_price
+        st.rerun()
+
+
+    if "price_number" in filtered.columns:
+
+        saved_min = st.session_state.get(
+            "price_min_filter",
+            None
+        )
+
+        saved_max = st.session_state.get(
+            "price_max_filter",
+            None
+        )
+
+
+        if saved_min is not None and saved_min > 0:
+
+            filtered = filtered[
+                filtered["price_number"] >= saved_min
+            ]
+
+
+        if saved_max is not None and saved_max > 0:
+
+            filtered = filtered[
+                filtered["price_number"] <= saved_max
+            ]
+
+
+
+    # ==================
+    # Rating
+    # ==================
+
+    st.markdown(
+        "<div class='filter-section-title'>Rating</div>",
+        unsafe_allow_html=True
+    )
+
+
+    rating_options = [
+        "★ 5",
+        "★ 4 ke atas",
+        "★ 3 ke atas",
+        "★ 2 ke atas"
+    ]
+
+
+    if "rating_filter" not in st.session_state:
+        st.session_state.rating_filter = None
+
+
+    for option in rating_options:
+
+        checked = st.checkbox(
+            option,
+            value=False,
+            key=f"rating_{option}"
+        )
+
+
+        if checked:
+            st.session_state.rating_filter = option
+
+
+    rating_filter = st.session_state.get(
+        "rating_filter",
+        None
+    )
+
+
+    if rating_filter and "ratingAverage" in filtered.columns:
+
+
+        if rating_filter == "★ 5":
+
+            filtered = filtered[
+                filtered["ratingAverage"] >= 5
+            ]
+
+
+        elif rating_filter == "★ 4 ke atas":
+
+            filtered = filtered[
+                filtered["ratingAverage"] >= 4
+            ]
+
+
+        elif rating_filter == "★ 3 ke atas":
+
+            filtered = filtered[
+                filtered["ratingAverage"] >= 3
+            ]
+
+
+        elif rating_filter == "★ 2 ke atas":
+
+            filtered = filtered[
+                filtered["ratingAverage"] >= 2
+            ]
+
+    st.markdown(
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    return filtered
+
+
+def get_initial_products(df, n=INITIAL_RANDOM_MAX_DISPLAY):
     cache_key = "catalog_initial_products"
 
     if cache_key in st.session_state:
@@ -82,13 +452,15 @@ def get_initial_products(df, n=INITIAL_DISPLAY):
         st.session_state[cache_key] = pd.DataFrame()
         return st.session_state[cache_key]
 
+    sample_size = min(n, len(df))
+
     umkm_mask = get_umkm_mask(df)
     umkm_df = df[umkm_mask]
     non_umkm_df = df[~umkm_mask]
 
-    # Seperti desain Figma: mayoritas UMKM, tetapi tetap ada Non-UMKM agar filter informatif.
-    umkm_target = min(int(n * 0.72), len(umkm_df))
-    non_umkm_target = min(n - umkm_target, len(non_umkm_df))
+    # Mayoritas UMKM, tetapi tetap ada Non-UMKM agar filter informatif.
+    umkm_target = min(int(sample_size * 0.72), len(umkm_df))
+    non_umkm_target = min(sample_size - umkm_target, len(non_umkm_df))
 
     parts = []
 
@@ -101,11 +473,11 @@ def get_initial_products(df, n=INITIAL_DISPLAY):
     if parts:
         initial_products = pd.concat(parts, axis=0)
     else:
-        initial_products = df.sample(n=min(n, len(df)))
+        initial_products = df.sample(n=sample_size)
 
-    if len(initial_products) < min(n, len(df)):
+    if len(initial_products) < sample_size:
         remaining = df.drop(index=initial_products.index, errors="ignore")
-        need = min(n, len(df)) - len(initial_products)
+        need = sample_size - len(initial_products)
 
         if not remaining.empty and need > 0:
             initial_products = pd.concat(
@@ -121,11 +493,16 @@ def get_initial_products(df, n=INITIAL_DISPLAY):
 
 def render_filter_pills(active_filter):
     links = []
+    current_query = st.session_state.get("catalog_query", "").strip()
 
     for option in FILTER_OPTIONS:
         active_class = "active" if active_filter == option else ""
         label = "Semua Produk" if option == "Semua" else option
+
         url = f"?page=Beranda&catalog_filter={quote(option)}"
+
+        if current_query:
+            url += f"&q={quote(current_query)}"
 
         links.append(
             f'<a class="catalog-pill {active_class}" href="{url}" target="_self">{label}</a>'
@@ -140,34 +517,12 @@ def render_filter_pills(active_filter):
     )
 
 
-def build_filter_pills_html(active_filter, current_query=""):
-    links = []
-
-    for option in FILTER_OPTIONS:
-        active_class = "active" if active_filter == option else ""
-        label = "Semua Produk" if option == "Semua" else option
-
-        url = (
-            f"?page=Beranda"
-            f"&catalog_filter={quote(option)}"
-        )
-
-        if current_query:
-            url += f"&q={quote(current_query)}"
-
-        links.append(
-            f'<a class="catalog-pill {active_class}" href="{url}" target="_self">{label}</a>'
-        )
-
-    return "".join(links)
-
-
 def render_catalog_grid(result_view, key_prefix):
     per_row = 5
     result_view = result_view.reset_index(drop=True)
 
     for i in range(0, len(result_view), per_row):
-        cols = st.columns(per_row, gap="medium")
+        cols = st.columns(per_row, gap="small")
 
         for j, col in enumerate(cols):
             idx = i + j
@@ -181,29 +536,59 @@ def render_catalog_grid(result_view, key_prefix):
                     )
 
 
-def render_catalog_info_bar(result_view, total_result, is_search_result=False):
-    umkm_count, non_umkm_count = count_catalog_type(result_view)
-
-    fairness_html = ""
-    if is_search_result and len(result_view) > 0:
-        fairness = round(umkm_count / len(result_view), 3)
-        fairness_html = f'<span class="catalog-info-separator"></span>Fairness: <b>{fairness}</b>'
-
+def render_register_cta():
     _html(
-        f"""
-        <div class="catalog-info-bar">
-            <div class="catalog-info-left">
-                Menampilkan <b>{len(result_view)}</b> dari <b>{total_result}</b> produk
-                {fairness_html}
+        """
+        <div class="catalog-register-cta">
+            <div>
+                <div class="catalog-register-title">Punya toko yang menjual produk lokal?</div>
+                <div class="catalog-register-subtitle">
+                    Daftarkan produk Anda dan jangkau lebih banyak konsumen.
+                </div>
             </div>
 
-            <div class="catalog-info-right">
-                <span class="legend-dot umkm"></span> UMKM: <b>{umkm_count}</b>
-                <span class="legend-dot non"></span> Non-UMKM: <b>{non_umkm_count}</b>
-            </div>
+            <a class="catalog-register-button" href="?page=Beranda&register_product=1" target="_self">
+                📝&nbsp; Daftar Produk Sekarang
+            </a>
         </div>
         """
     )
+
+
+def render_catalog_info_bar(result_view, total_result, is_search_result=False, query=""):
+    umkm_count, non_umkm_count = count_catalog_type(result_view)
+
+    fairness_html = ""
+    #if is_search_result and len(result_view) > 0:
+    #    fairness = round(umkm_count / len(result_view), 3)
+    #    fairness_html = f'<span class="catalog-info-separator"></span>Fairness: <b>{fairness}</b>'
+
+    if is_search_result:
+
+        _html(
+            f"""
+            <div class="catalog-search-title">
+                Hasil Pencarian: <b>"{query}"</b>
+            </div>
+            """
+        )
+
+    else:
+
+        _html(
+            f"""
+            <div class="catalog-info-bar">
+                <div class="catalog-info-left">
+                    Menampilkan <b>{len(result_view)}</b> dari <b>{total_result}</b> produk
+                    {fairness_html}
+                </div>
+
+                <div class="catalog-info-right">
+                    <span class="legend-dot umkm"></span> UMKM: <b>{umkm_count}</b>
+                </div>
+            </div>
+            """
+        )
 
 
 def render_empty_state():
@@ -231,13 +616,16 @@ def render_catalog_results(result, key_prefix, show_load_more=True, is_search_re
         result_view=visible_result,
         total_result=len(result),
         is_search_result=is_search_result,
+        query=st.session_state.get("catalog_query","")
     )
 
-    render_catalog_grid(result_view=visible_result, key_prefix=key_prefix)
+    with st.container(key=f"{key_prefix}_grid_wrap"):
+        render_catalog_grid(result_view=visible_result, key_prefix=key_prefix)
 
     if show_load_more and st.session_state.visible_count < len(result):
-        st.write("")
-        col_left, col_btn, col_right = st.columns([2.2, 1, 2.2])
+        _html('<div class="load-more-spacer"></div>')
+
+        col_left, col_btn, col_right = st.columns([3.3, 0.7, 3.3])
 
         with col_btn:
             if st.button("Muat Lebih Banyak", use_container_width=True):
@@ -247,6 +635,95 @@ def render_catalog_results(result, key_prefix, show_load_more=True, is_search_re
     elif show_load_more:
         st.write("")
         st.info("Semua produk relevan sudah ditampilkan.")
+
+
+def render_new_umkm_section():
+
+    new_products = get_approved_submissions()
+
+
+    if new_products.empty:
+        return
+
+
+    _html(
+        f"""
+        <div class="catalog-new-umkm-bar">
+            <div class="catalog-new-umkm-left">
+                <span class="catalog-new-umkm-icon">🌱</span>
+                <span>Produk UMKM Baru Bergabung</span>
+            </div>
+
+            <div class="catalog-new-umkm-right">
+                <span class="catalog-new-umkm-dot"></span>
+                Produk baru: <b>{len(new_products)}</b>
+            </div>
+        </div>
+        """
+    )
+
+
+    converted_products = []
+
+
+    for _, row in new_products.iterrows():
+
+        converted_products.append(
+            {
+                "id": f"submission_{row.name}",
+                "name": row.get(
+                    "product_name",
+                    "-"
+                ),
+
+                "shop_name": row.get(
+                    "shop_name",
+                    "-"
+                ),
+
+                "price_number": row.get(
+                    "estimated_price",
+                    0
+                ),
+
+                "price_original": None,
+
+                "ratingAverage": 0,
+
+                "countReview": 0,
+
+                "countSold": 0,
+
+                "image_local_path": row.get(
+                    "image_local_path",
+                    ""
+                ),
+
+                "category_breadcrumb": row.get(
+                    "business_category",
+                    "UMKM"
+                ),
+
+                "umkm_label": 1,
+
+                "umkm_binary": 1,
+            }
+        )
+
+
+    new_df = pd.DataFrame(
+        converted_products
+    )
+
+
+    with st.container(
+        key="new_umkm_grid_wrap"
+    ):
+
+        render_catalog_grid(
+            result_view=new_df.head(5),
+            key_prefix="new_umkm"
+        )
 
 
 def load_catalog_css():
@@ -274,28 +751,45 @@ def load_catalog_css():
             gap: 0rem !important;
         }
 
+        :root {
+            --catalog-hero-gradient: linear-gradient(
+                135deg,
+                #075985 0%,
+                #0f67b1 45%,
+                #2563eb 100%
+            );
+        }
+
         /* ===== HERO ===== */
+        .st-key-catalog_hero_block {
+            width: 100%;
+            background: var(--catalog-hero-gradient);
+            padding: 54px 24px 54px 24px;
+            color: #ffffff;
+        }
+
         .catalog-hero {
             width: 100%;
-            background: #0054a3;
-            padding: 56px 24px 120px 24px;
+            background: var(--catalog-hero-gradient);
+            background-attachment: fixed;
+            padding: 56px 24px 180px 24px;
             text-align: center;
             color: #ffffff;
         }
 
         .catalog-hero-inner {
-            max-width: 760px;
+            max-width: 980px;
             margin: 0 auto;
             text-align: center;
         }
 
         .catalog-eyebrow {
-            color: rgba(255,255,255,0.62);
+            color: #b4e5ff;
             font-size: 12px;
             font-weight: 800;
             letter-spacing: 1.8px;
             text-transform: uppercase;
-            margin: 0 0 18px 0;
+            margin: 0 0 7px 0;
         }
 
         .catalog-title {
@@ -304,49 +798,51 @@ def load_catalog_css():
             font-weight: 900;
             line-height: 1.22;
             letter-spacing: -0.02em;
-            margin: 0 0 26px 0;
+            margin: 0 auto 26px auto;
+            padding-top: 0 !important;
+            text-align: center;
         }
 
         .catalog-subtitle {
-            color: rgba(255,255,255,0.72);
-            font-size: 15px;
-            font-weight: 600;
+            color: #dbeafe;
+            font-size: 16px;
+            font-weight: 400;
             margin: 0;
+            padding-top: 24px;
         }
 
         /* ===== SEARCH INPUT STREAMLIT ===== */
-        div[data-testid="stTextInput"] {
+        .st-key-catalog_hero_block div[data-testid="stTextInput"] {
             max-width: 672px !important;
-            margin: -118px auto 0 auto !important;
+            margin: 26px auto 0 auto !important;
             position: relative !important;
             z-index: 20 !important;
         }
 
-        div[data-testid="stTextInput"] > div {
+        .st-key-catalog_hero_block div[data-testid="stTextInput"] > div {
             position: relative !important;
         }
 
-        div[data-testid="stTextInput"] div[data-testid="InputInstructions"] {
+        .st-key-catalog_hero_block div[data-testid="stTextInput"] div[data-testid="InputInstructions"] {
             display: none !important;
         }
 
-        div[data-testid="stTextInput"] div[data-baseweb="input"] {
+        .st-key-catalog_hero_block div[data-testid="stTextInput"] div[data-baseweb="input"] {
             width: 100% !important;
-            height: 52px !important;
-            margin-top: 10px !important;
-            min-height: 52px !important;
+            height: 42px !important;
+            min-height: 42px !important;
             border-radius: 14px !important;
-            border: 1px solid #e5e7eb !important;
+            border: 1px solid rgba(255, 255, 255, 0.35) !important;
             background: #ffffff !important;
-            box-shadow: 0 18px 38px rgba(15, 23, 42, 0.22) !important;
+            box-shadow: 0 18px 38px rgba(15, 23, 42, 0.18) !important;
             overflow: hidden !important;
             position: relative !important;
         }
 
-        div[data-testid="stTextInput"] input {
+        .st-key-catalog_hero_block div[data-testid="stTextInput"] input {
             width: 100% !important;
-            height: 52px !important;
-            min-height: 52px !important;
+            height: 42px !important;
+            min-height: 42px !important;
             border: none !important;
             outline: none !important;
             box-shadow: none !important;
@@ -364,81 +860,247 @@ def load_catalog_css():
             color: #111827 !important;
         }
 
-        div[data-testid="stTextInput"] input::placeholder {
-            color: #9ca3af !important;
+        .st-key-catalog_hero_block div[data-testid="stTextInput"] input::placeholder {
+            color: #94a3b8 !important;
             opacity: 1 !important;
         }
 
-        div[data-testid="stTextInput"] div[data-baseweb="input"]:focus-within {
+        .st-key-catalog_hero_block div[data-testid="stTextInput"] div[data-baseweb="input"]:focus-within {
             border-color: #ffffff !important;
             box-shadow:
                 0 0 0 3px rgba(255, 255, 255, 0.45),
-                0 18px 38px rgba(15, 23, 42, 0.22) !important;
+                0 18px 45px rgba(15, 23, 42, 0.18) !important;
+        }
+
+        /* ===== RESET INPUT DI MODAL / DIALOG ===== */
+        .st-key-catalog_hero_block div[data-testid="stDialog"] div[data-testid="stTextInput"] {
+            max-width: none !important;
+            width: 100% !important;
+            margin: 0 !important;
+            position: static !important;
+            z-index: auto !important;
+        }
+
+        .st-key-catalog_hero_block div[data-testid="stDialog"] div[data-testid="stTextInput"] > div {
+            position: static !important;
+        }
+
+        .st-key-catalog_hero_block div[data-testid="stDialog"] div[data-baseweb="input"] {
+            width: 100% !important;
+            height: 42px !important;
+            min-height: 42px !important;
+            border-radius: 10px !important;
+            border: 1px solid #d1d5db !important;
+            background: #ffffff !important;
+            box-shadow: none !important;
+            overflow: hidden !important;
+        }
+
+        .st-key-catalog_hero_block div[data-testid="stDialog"] div[data-testid="stTextInput"] input {
+            width: 100% !important;
+            height: 42px !important;
+            min-height: 42px !important;
+            padding-left: 12px !important;
+            padding-right: 12px !important;
+            background-image: none !important;
+            background-color: transparent !important;
+            box-shadow: none !important;
+            border: none !important;
+            outline: none !important;
+            font-size: 14px !important;
+            color: #111827 !important;
+        }
+
+        .st-key-catalog_hero_block div[data-testid="stDialog"] div[data-testid="InputInstructions"] {
+            display: none !important;
+        }
+
+        /* ===== RESET TEXTAREA DI MODAL ===== */
+        .st-key-catalog_hero_block div[data-testid="stDialog"] textarea {
+            border-radius: 10px !important;
+            border: 1px solid #d1d5db !important;
+            background: #ffffff !important;
+            box-shadow: none !important;
+            font-size: 14px !important;
+            color: #111827 !important;
+        }
+
+        /* ===== RESET SELECTBOX DI MODAL ===== */
+        .st-key-catalog_hero_block div[data-testid="stDialog"] div[data-baseweb="select"] > div {
+            min-height: 42px !important;
+            border-radius: 10px !important;
+            border: 1px solid #d1d5db !important;
+            background: #ffffff !important;
+            box-shadow: none !important;
+        }
+
+        /* ===== RESET LABEL DI MODAL ===== */
+        .st-key-catalog_hero_block div[data-testid="stDialog"] label {
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            color: #111827 !important;
+            margin-bottom: 4px !important;
+        }
+
+        /* ===== PRODUCT GRID OUTER GAP ===== */
+        .st-key-initial_product_grid_wrap,
+        .st-key-search_result_grid_wrap {
+            padding: 0 !important;
+            box-sizing: border-box;
         }
 
         /* ===== FILTER PILLS ===== */
         .catalog-filter-pills {
+            width: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
             gap: 12px;
-            margin-top: 18px;
-            margin-bottom: 48px;
+            margin-top: 22px;
+            margin-bottom: 70px;
             position: relative;
             z-index: 19;
-            isolation: isolate;
         }
 
         .catalog-filter-pills::before {
-            content: "";
-            position: absolute;
-            left: 50%;
-            top: -92px;
-            transform: translateX(-50%);
-            width: 100vw;
-            height: 136px;
-            background: #0054a3;
-            z-index: -1;
-            pointer-events: none;
+            display: none !important;
         }
 
         .catalog-pill {
+            width: 150px;
+            height: 36px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            height: 31px;
-            padding: 0 28px;
+            padding: 0 18px;
             border-radius: 999px;
             background: rgba(255,255,255,0.16);
-            color: #ffffff !important;
+            color: #e0f2fe !important;
             text-decoration: none !important;
             font-size: 12px;
             font-weight: 800;
-            border: 1px solid rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.28);
             transition: all 0.18s ease;
         }
 
         .catalog-pill:hover {
-            background: rgba(255,255,255,0.25);
+            background: rgba(255, 255, 255, 0.24);
+            color: #ffffff !important;
         }
 
         .catalog-pill.active {
             background: #ffffff;
-            color: #173b5f !important;
+            color: #075985 !important;
             border-color: #ffffff;
             box-shadow: 0 12px 26px rgba(15, 23, 42, 0.18);
+        }
+
+        .catalog-register-cta {
+            max-width: 672px;
+            margin: 0 auto;
+            padding: 18px 0 0 0;
+            border-top: 1px solid rgba(255,255,255,0.18);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            position: relative;
+            z-index: 8;
+            color: #ffffff;
+        }
+
+        .catalog-register-cta::before {
+            display: none !important;
+        }
+
+        .catalog-register-title {
+            font-size: 14px;
+            font-weight: 900;
+            color: #ffffff;
+            text-align: left;
+        }
+
+        .catalog-register-subtitle {
+            margin-top: 0;
+            font-size: 12px;
+            color: rgba(255,255,255,0.72);
+            text-align: left;
+        }
+
+        .catalog-register-button {
+            height: 40px;
+            padding: 0 20px 0 18px;
+            border-radius: 13px;
+            background: #ffffff;
+            color: #2563eb !important;
+            text-decoration: none !important;
+            font-size: 15px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+            box-shadow: 0 12px 26px rgba(15, 23, 42, 0.14);
+        }
+
+        .catalog-register-button:hover {
+            background: #eff6ff;
         }
 
         .catalog-info-bar {
             max-width: 1380px;
             min-height: 42px;
-            margin: 20px auto 1px auto;
+            margin: 5px auto 5px auto;
             padding: 0 8px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             color: #64748b;
+            background-color: #ddeaf7;
             font-size: 13px;
+        }
+
+        /* ===== NEW UMKM SECTION BAR ===== */
+        .catalog-new-umkm-bar {
+            max-width: 1380px;
+            min-height: 42px;
+            margin: 5px auto 5px auto;
+            padding: 0 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: #64748b;
+            background-color: #ddeaf7;
+            font-size: 13px;
+            box-sizing: border-box;
+        }
+
+        .catalog-new-umkm-left,
+        .catalog-new-umkm-right {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            flex-wrap: wrap;
+        }
+
+        .catalog-new-umkm-left span:last-child {
+            color: #334155;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .catalog-new-umkm-icon {
+            font-size: 15px;
+            line-height: 1;
+        }
+
+        .catalog-new-umkm-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            display: inline-block;
+            background: #10b981;
+            margin-left: 8px;
         }
 
         .catalog-info-left,
@@ -455,6 +1117,21 @@ def load_catalog_css():
             background: #cbd5e1;
             display: inline-block;
             margin: 0 8px;
+        }
+
+        .catalog-search-title {
+            max-width:1380px;
+            margin:10px auto 15px auto;
+            padding:0;
+            font-size:18px;
+            font-weight:700;
+            color:#5d6067;
+        }
+
+
+        .catalog-search-title b {
+            color:#0e65ab;
+            font-size: 18px;
         }
 
         .legend-dot {
@@ -483,11 +1160,13 @@ def load_catalog_css():
         .market-card {
             background: #ffffff;
             border: 1px solid #e5e7eb;
-            border-radius: 13px;
+            border-radius: 16px;
             overflow: hidden;
-            box-shadow: 0 5px 14px rgba(15, 23, 42, 0.08);
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
             transition: all 0.18s ease;
             height: 100%;
+            display: flex;
+            flex-direction: column;
         }
 
         .market-card:hover {
@@ -531,6 +1210,7 @@ def load_catalog_css():
 
         .market-badge.non {
             background: #2b7fff;
+            display: none !important;
         }
 
         .market-discount {
@@ -550,7 +1230,10 @@ def load_catalog_css():
         }
 
         .market-card-body {
-            padding: 11px 13px 12px 13px;
+            padding: 10px 12px 12px 12px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
         }
 
         .market-category {
@@ -600,10 +1283,16 @@ def load_catalog_css():
         .market-rating-row {
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 4px;
             color: #334155;
             font-size: 11.5px;
-            margin-top: 6px;
+            margin-top: auto;
+            padding-top: 14px;
+        }
+
+        .market-rating-row span:nth-child(3) {
+            margin-left: 2px;
+            margin-right: 2px;
         }
 
         .market-star {
@@ -616,7 +1305,7 @@ def load_catalog_css():
         }
 
         .market-shop {
-            margin-top: 8px;
+            margin-top: 4px;
             color: #64748b;
             font-size: 10.5px;
             overflow: hidden;
@@ -633,6 +1322,63 @@ def load_catalog_css():
             color: #64748b;
             margin-top: 24px;
             box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+        }
+
+        .load-more-spacer {
+            height: 36px;
+        }
+
+        /* Tombol Muat Lebih Banyak */
+        div[data-testid="stButton"] {
+            display: flex;
+            justify-content: center;
+        }
+
+        div[data-testid="stButton"] button {
+            min-width: 10px !important;
+            height: 36px !important;
+            min-height: 36px !important;
+            border-radius: 10px !important;
+            background: #2563eb !important;
+            color: #ffffff !important;
+            border: 1px solid #2563eb !important;
+            font-size: 12px !important;
+            font-weight: 700 !important;
+            white-space: nowrap !important;
+        }
+
+        /* teks di dalam tombol */
+        div[data-testid="stButton"] button p {
+            font-size: 12px !important;
+            font-weight: 700 !important;
+            line-height: 1 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            white-space: nowrap !important;
+        }
+
+        div[data-testid="stButton"] button:hover {
+            background: #1d4ed8 !important;
+            border-color: #1d4ed8 !important;
+            transform: translateY(-1px);
+        }
+
+        /* ===== RESET BUTTON DI MODAL / DIALOG ===== */
+        div[data-testid="stDialog"] div[data-testid="stButton"] {
+            display: block !important;
+            justify-content: initial !important;
+        }
+
+        div[data-testid="stDialog"] div[data-testid="stButton"] button {
+            width: 100% !important;
+            min-width: 0 !important;
+            height: 44px !important;
+            min-height: 44px !important;
+            border-radius: 12px !important;
+            font-size: 14px !important;
+            font-weight: 800 !important;
+            white-space: nowrap !important;
+            transform: none !important;
         }
 
         .catalog-empty-icon {
@@ -652,6 +1398,237 @@ def load_catalog_css():
             font-size: 14px;
         }
 
+        /* ===== SEARCH FILTER PANEL ===== */
+
+        /* Container filter */
+        .st-key-filter_sidebar_box {
+            padding-left:30px !important;
+            padding-right:20px !important;
+        }
+
+        /* Judul utama FILTER */
+        .st-key-filter_sidebar_box .filter-title {
+            font-size:24px !important;
+            font-weight:900 !important;
+            color:#0f172a !important;
+            margin-top:20px !important;
+            margin-bottom:20px !important;
+        }
+
+        /* ===== FILTER SECTION TITLE ===== */
+        .st-key-filter_sidebar_box .filter-section-title,
+        .st-key-filter_sidebar_box div[data-testid="stWidgetLabel"] p {
+            font-size:14px !important;
+            font-weight:0 !important;
+            color:#1e293b !important;
+            margin-top:18px !important;
+            margin-bottom:10px !important;
+        }
+
+        /* Label checkbox */
+        .st-key-filter_sidebar_box div[data-testid="stCheckbox"] label {
+            font-size:15px !important;
+            color:#334155 !important;
+        }
+
+        /* ===== LOCATION INPUT ===== */
+        .st-key-filter_sidebar_box div[data-baseweb="select"] {
+            width:150px !important;
+        }
+
+        .st-key-filter_sidebar_box div[data-baseweb="select"] > div {
+            height:38px !important;
+            min-height:38px !important;
+            border-radius:10px !important;
+            background:#ffffff !important;
+            border:1px solid #cbd5e1 !important;
+            box-shadow:none !important;
+            color:#94a3b8 !important;
+            font-size:14px !important;
+        }
+
+        /* Input harga */
+        .st-key-filter_sidebar_box input {
+            border-radius:10px !important;
+            font-size:14px !important;
+        }
+
+        .st-key-filter_sidebar_box div[data-testid="stNumberInput"] {
+            width:80px !important;
+            margin-top: 8px !important;
+        }
+
+        /* Input harga */
+        .st-key-filter_sidebar_box div[data-testid="stNumberInput"] input {
+            height:36px !important;
+            border-radius:10px !important;
+            font-size:12px !important;
+            background:#ffffff !important;
+            border:1px solid #cbd5e1 !important;
+            padding-left:10px !important;
+            outline:none !important;
+        }
+
+        /* Hilangkan border merah focus/error number input */
+        .st-key-filter_sidebar_box div[data-testid="stNumberInput"] div[data-baseweb="base-input"] {
+            border-color:#cbd5e1 !important;
+            box-shadow:none !important;
+        }
+
+        .st-key-filter_sidebar_box div[data-testid="stNumberInput"] div[data-baseweb="input"] {
+            border-color:#cbd5e1 !important;
+            box-shadow:none !important;
+        }
+
+        .st-key-filter_sidebar_box div[data-testid="stNumberInput"] div[data-baseweb="input"]:focus-within {
+            border-color:#cbd5e1 !important;
+            box-shadow:none !important;
+        }
+
+        .st-key-filter_sidebar_box div[data-testid="stNumberInput"] div:focus-within {
+            border-color:#cbd5e1 !important;
+            box-shadow:none !important;
+        }
+
+        /* Hapus tombol clear pada number input */
+        .st-key-filter_sidebar_box div[data-testid="stNumberInput"] button {
+            display:none !important;
+            visibility:hidden !important;
+            width:0 !important;
+            padding:0 !important;
+            margin:0 !important;
+        }
+
+        .st-key-filter_sidebar_box div[data-testid="stHorizontalBlock"] {
+            gap:16px !important;
+        }
+
+        /* placeholder */
+        .st-key-filter_sidebar_box input::placeholder {
+            color:#94a3b8 !important;
+        }
+
+        /* Tombol PAKAI */
+        .st-key-filter_sidebar_box .st-key-apply_price_filter button {
+            width:70px !important;
+            height:20px !important;
+            background:#2563eb !important;
+            color:white !important;
+            border-radius:10px !important;
+            font-size:10px !important;
+            font-weight:0 !important;
+        }
+
+        /* FILTER LEFT SPACING */
+        .st-key-filter_sidebar_box {
+            padding-left: 30px !important;
+            padding-right: 15px !important;
+        }
+
+        .st-key-filter_sidebar_box div[data-testid="stCheckbox"] label {
+            font-size:15px !important;
+            color:#334155 !important;
+        }
+
+        .st-key-filter_sidebar_box input {
+            border-radius:10px !important;
+            font-size:14px !important;
+        }
+
+        .st-key-filter_sidebar_box div[data-baseweb="checkbox"] > div:first-child {
+            border-color:#cbd5e1 !important;
+        }
+
+
+        .st-key-filter_sidebar_box div[data-baseweb="checkbox"] input:checked + div {
+            background-color:#2563eb !important;
+            border-color:#2563eb !important;
+        }
+
+        .st-key-filter_sidebar_box div[data-testid="stCheckbox"] input {
+            accent-color:#2563eb !important;
+        }
+
+        .st-key-filter_sidebar_box div[data-testid="stCheckbox"] label {
+            font-size:15px !important;
+            color:#334155 !important;
+        }
+
+        .st-key-filter_sidebar_box div[data-testid="stCheckbox"] div[role="checkbox"][aria-checked="true"] {
+            background-color:#2563eb !important;
+            border-color:#2563eb !important;
+        }
+
+        /* ===== FILTER CHECKBOX ALIGNMENT ===== */
+        .st-key-filter_sidebar_box div[data-testid="stCheckbox"] {
+            margin-bottom:4px !important;
+        }
+
+        .st-key-filter_sidebar_box div[data-testid="stCheckbox"] > label {
+            display:flex !important;
+            align-items:center !important;
+            padding-top: 12px;
+            gap:0px !important;
+        }
+
+        .st-key-filter_sidebar_box div[data-testid="stCheckbox"] p {
+            margin:0 !important;
+            line-height:1.2 !important;
+        }
+
+        /* ===== SEARCH SORT RADIO ===== */
+        .st-key-search_sort {
+            width:100% !important;
+        }
+
+        .st-key-search_sort [data-testid="stRadio"] > div {
+            display:flex !important;
+            flex-direction:row !important;
+            gap:14px !important;
+            align-items:center !important;
+        }
+
+        .st-key-search_sort label {
+            white-space:nowrap !important;
+            font-size:15px !important;
+        }
+
+        /* ===== SEARCH SORT RADIO COLOR ===== */
+        .st-key-search_sort div[data-baseweb="radio"] div[role="radio"][aria-checked="true"] {
+            background-color: #2563eb !important;
+            border-color: #2563eb !important;
+        }
+
+        .st-key-search_sort div[data-baseweb="radio"] div[role="radio"] {
+            border-color: #cbd5e1 !important;
+        }
+
+        .st-key-search_sort div[data-baseweb="radio"] div[role="radio"][aria-checked="true"]::after {
+            background-color: #ffffff !important;
+        }
+
+        /* FILTER utama */
+        .st-key-filter_sidebar_box .filter-title {
+            font-size:20px !important;
+            font-weight:800 !important;
+            color:#2e4374 !important;
+            margin-bottom:20px !important;
+        }
+
+        /* ===== FORCE STREAMLIT CHECKBOX BLUE ===== */
+        .st-key-filter_sidebar_box [data-testid="stCheckbox"] div[role="checkbox"] {
+            border-color:#2563eb !important;
+        }
+
+        .st-key-filter_sidebar_box [data-testid="stCheckbox"] div[role="checkbox"][aria-checked="true"] {
+            background-color:#2563eb !important;
+            border-color:#2563eb !important;
+        }
+
+        .st-key-filter_sidebar_box [data-testid="stCheckbox"] svg {
+            color:white !important;
+        }
+
         @media (max-width: 1100px) {
             .market-image-wrap {
                 height: 220px;
@@ -666,11 +1643,13 @@ def load_catalog_css():
 
             .catalog-title {
                 color: #ffffff;
-                font-size: 26px !important;
+                font-size: 44px !important;
                 font-weight: 900;
                 line-height: 1.22;
                 letter-spacing: -0.02em;
-                margin: 0 0 7px 0;
+                margin: 0 auto;
+                padding-top: 0 !important;
+                text-align: center;
             }
 
             .catalog-support-badge {
@@ -695,6 +1674,7 @@ def load_catalog_css():
                 align-items: flex-start;
                 flex-direction: column;
             }
+
         }
         </style>
         """
@@ -713,6 +1693,9 @@ def render_catalog_page(df, recommender):
 
     if "catalog_filter" not in st.session_state:
         st.session_state.catalog_filter = "Semua"
+
+    if "catalog_view_mode" not in st.session_state:
+        st.session_state.catalog_view_mode = "initial"
     
     query_from_url = st.query_params.get("q", "")
 
@@ -731,33 +1714,50 @@ def render_catalog_page(df, recommender):
     load_catalog_css()
 
     hero_html = (
-        '<div class="catalog-hero">'
         '<div class="catalog-hero-inner">'
         '<p class="catalog-eyebrow">Ayo Dukung Produk Lokal</p>'
-        '<h1 class="catalog-title">Temukan Produk UMKM Terbaik Untuk Anda</h1>'
+        '<h1 class="catalog-title">Temukan Produk UMKM Terbaik<br>Untuk Anda</h1>'
         f'<p class="catalog-subtitle">{total_umkm:,} produk UMKM &nbsp;·&nbsp; {total_non_umkm:,} produk Non-UMKM &nbsp;·&nbsp; {total_products:,} total produk</p>'
-        '</div>'
         '</div>'
     ).replace(",", ".")
 
-    st.markdown(hero_html, unsafe_allow_html=True)
+    with st.container(key="catalog_hero_block"):
+        st.markdown(hero_html, unsafe_allow_html=True)
 
-    query = st.text_input(
-        "Cari produk",
-        placeholder="Cari produk, nama toko, kota, atau kategori...",
-        label_visibility="collapsed",
-        key="catalog_query"
-    )
+        query = st.text_input(
+            "Cari produk",
+            placeholder="Cari produk...",
+            label_visibility="collapsed",
+            key="catalog_query"
+        )
 
-    render_filter_pills(filter_mode)
+        query_clean = query.strip()
 
-    query_clean = query.strip()
+        url_query = st.query_params.get("q", "").strip()
+        url_filter = st.query_params.get("catalog_filter", "")
+
+        if query_clean:
+            if url_query == query_clean and url_filter in FILTER_OPTIONS:
+                display_filter_mode = url_filter
+            else:
+                display_filter_mode = "UMKM"
+        else:
+            display_filter_mode = filter_mode
+
+        render_filter_pills(active_filter=display_filter_mode)
+
+        render_register_cta()
+
 
     if query_clean:
+        if st.session_state.catalog_view_mode != "search":
+            st.session_state.visible_count = INITIAL_DISPLAY
+            st.session_state.catalog_view_mode = "search"
+            
         if st.session_state.last_query != query_clean:
             result = recommender.search(
                 query=query_clean,
-                top_n=len(df),
+                top_n=SEARCH_POOL_SIZE,
                 weight_relevance=WEIGHT_RELEVANCE,
                 weight_popularity=WEIGHT_POPULARITY,
                 weight_value=WEIGHT_VALUE,
@@ -769,26 +1769,83 @@ def render_catalog_page(df, recommender):
             st.session_state.last_query = query_clean
             st.session_state.visible_count = INITIAL_DISPLAY
 
-        filtered_result = apply_catalog_filter(st.session_state.result, filter_mode)
+        url_query = st.query_params.get("q", "").strip()
+        url_filter = st.query_params.get("catalog_filter", "")
 
-        render_catalog_results(
-            result=filtered_result,
-            key_prefix="search_result",
-            show_load_more=True,
-            is_search_result=True,
+        if url_query == query_clean and url_filter in FILTER_OPTIONS:
+            search_filter_mode = url_filter
+        else:
+            search_filter_mode = "UMKM"
+
+        filtered_result = apply_catalog_filter(
+            st.session_state.result,
+            search_filter_mode
         )
 
+
+        # =========================
+        # SEARCH RESULT LAYOUT
+        # =========================
+
+        left_filter, right_result = st.columns(
+            [0.9, 5],
+            gap="medium"
+        )
+
+
+        with left_filter:
+
+            with st.container(key="filter_sidebar_box"):
+
+                filtered_result = render_search_filter_panel(
+                    filtered_result
+                )
+
+
+        with right_result:
+
+            render_catalog_info_bar(
+                result_view=filtered_result,
+                total_result=len(filtered_result),
+                is_search_result=True,
+                query=query_clean
+            )
+
+
+            sort_mode = render_search_sort()
+
+
+            filtered_result = apply_search_sort(
+                filtered_result,
+                sort_mode
+            )
+
+
+            render_catalog_grid(
+                result_view=filtered_result.head(
+                    st.session_state.visible_count
+                ),
+                key_prefix="search_result"
+            )
+
     else:
+        if st.session_state.catalog_view_mode != "initial":
+            st.session_state.visible_count = INITIAL_DISPLAY
+            st.session_state.catalog_view_mode = "initial"
+
         st.session_state.result = pd.DataFrame()
         st.session_state.last_query = ""
-        st.session_state.visible_count = INITIAL_DISPLAY
 
-        initial_products = get_initial_products(df, n=INITIAL_DISPLAY)
+        initial_products = get_initial_products(df, n=INITIAL_RANDOM_MAX_DISPLAY)
         filtered_initial = apply_catalog_filter(initial_products, filter_mode)
+
+        render_new_umkm_section()
 
         render_catalog_results(
             result=filtered_initial,
             key_prefix="initial_product",
-            show_load_more=False,
+            show_load_more=True,
             is_search_result=False,
         )
+
+        render_product_registration_flow()

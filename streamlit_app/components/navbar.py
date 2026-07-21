@@ -21,7 +21,7 @@ def render_navbar():
 .umkm-navbar-inner {
     max-width: 1380px;
     margin: 0 auto;
-    padding: 16px 8px 30px 36px;
+    padding: 12px 36px 12px 36px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -47,7 +47,7 @@ def render_navbar():
     justify-content: center;
     font-size: 18px;
     font-weight: 900;
-    box-shadow: 0 4px 18px rgba(37, 99, 235, 0.14);
+    box-shadow: -3px 1px 0 2px #eaf5ff;
 }
 
 .umkm-brand-icon .material-symbols-rounded {
@@ -57,9 +57,9 @@ def render_navbar():
 }
 
 .umkm-brand-title {
-    font-size: 17px;
+    font-size: 16px;
     font-weight: 900;
-    color: #2563eb;
+    color: #0a5e94;
     line-height: 1.05;
 }
 
@@ -74,6 +74,25 @@ def render_navbar():
     align-items: center;
     justify-content: flex-end;
     gap: 12px;
+}
+
+.umkm-register-nav {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    padding: 0 16px 0 14px;
+    border-radius: 10px;
+    background: #2263e5;
+    color: #ffffff !important;
+    text-decoration: none !important;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.28);
+}
+
+.umkm-register-nav:hover {
+    background: #1d4ed8;
 }
 
 .umkm-nav-link {
@@ -115,23 +134,23 @@ def render_navbar():
 </style>
 """
 
-    beranda_url = f"?page={quote('Beranda')}"
-    tentang_url = f"?page={quote('Tentang')}"
+    register_url = "?page=Beranda&register_product=1"
 
     navbar_html = (
         '<div class="umkm-navbar">'
         '<div class="umkm-navbar-inner">'
-        f'<a class="umkm-brand" href="{beranda_url}" target="_self">'
+        '<a class="umkm-brand" href="?page=Beranda" target="_self">'
         '<div class="umkm-brand-icon">🛍️</div>'
         '<div>'
         '<div class="umkm-brand-title">Katalog Produk</div>'
         '<div class="umkm-brand-subtitle">Sistem Rekomendasi</div>'
         '</div>'
         '</a>'
+
         '<div class="umkm-nav-menu">'
-        f'<a class="{nav_class("Beranda")}" href="{beranda_url}" target="_self">Beranda</a>'
-        f'<a class="{nav_class("Tentang")}" href="{tentang_url}" target="_self">Tentang</a>'
+        f'<a class="umkm-register-nav" href="{register_url}" target="_self">📝&nbsp; Daftar Produk</a>'
         '</div>'
+
         '</div>'
         '</div>'
     )

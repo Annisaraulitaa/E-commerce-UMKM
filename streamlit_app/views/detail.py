@@ -105,8 +105,25 @@ def render_detail_product(product):
     shop_city = html.escape(str(get_value(product, "shop_city", default="-")))
     shop_tier = html.escape(str(get_value(product, "shop_tier", default="-")))
 
-    umkm_label = html.escape(str(get_value(product, "umkm_label", default="-")).upper())
-    badge_color = "#00c951" if umkm_label == "UMKM" else "#2b7fff"
+    raw_umkm_label = get_value(
+        product,
+        "umkm_label",
+        default=0
+    )
+
+    try:
+        is_umkm = int(float(raw_umkm_label)) == 1
+    except Exception:
+        is_umkm = False
+
+
+    umkm_label = "UMKM" if is_umkm else "NON-UMKM"
+
+    badge_color = (
+        "#00c951"
+        if is_umkm
+        else "#2b7fff"
+    )
 
     try:
         price_num = int(float(price_raw))
@@ -122,7 +139,9 @@ def render_detail_product(product):
         <style>
         /* ===== FLOATING MODAL PAGE BACKGROUND ===== */
         .stApp {
-            background: #edf4ff !important;
+            background:
+                linear-gradient(rgba(15, 23, 42, 0.42), rgba(15, 23, 42, 0.42)),
+                linear-gradient(135deg, #075985 0%, #0f67b1 45%, #2563eb 100%) !important;
             position: relative;
             overflow-x: hidden;
         }
@@ -134,14 +153,11 @@ def render_detail_product(product):
             z-index: 0;
             pointer-events: none;
             background:
-                linear-gradient(rgba(248, 250, 252, 0.82), rgba(248, 250, 252, 0.82)),
-                radial-gradient(circle at 18% 18%, rgba(37, 99, 235, 0.16), transparent 28%),
-                radial-gradient(circle at 84% 22%, rgba(22, 163, 74, 0.14), transparent 26%),
-                radial-gradient(circle at 50% 90%, rgba(99, 102, 241, 0.12), transparent 32%),
-                repeating-linear-gradient(0deg, rgba(15, 23, 42, 0.035) 0px, rgba(15, 23, 42, 0.035) 1px, transparent 1px, transparent 96px),
-                repeating-linear-gradient(90deg, rgba(15, 23, 42, 0.035) 0px, rgba(15, 23, 42, 0.035) 1px, transparent 1px, transparent 220px);
-            filter: blur(1.6px);
-            transform: scale(1.03);
+                radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.16), transparent 30%),
+                radial-gradient(circle at 82% 18%, rgba(255, 255, 255, 0.10), transparent 28%),
+                rgba(15, 23, 42, 0.18);
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
         }
 
         header[data-testid="stHeader"] {
@@ -164,17 +180,19 @@ def render_detail_product(product):
         }
 
         .block-container {
-            max-width: 1000px !important;
-            width: calc(100% - 64px) !important;
-            min-height: 620px !important;
-            margin: 24px auto 32px auto !important; 
-            padding: 24px 48px 36px 48px !important;
-            background: rgba(255, 255, 255, 0.94) !important;
+            max-width: 920px !important;
+            width: calc(100% - 180px) !important;
+            min-height: auto !important;
+            margin: 20px auto 34px auto !important; 
+            padding: 22px 36px 30px 36px !important;
+
+            background: #ffffff !important;
             border: 1px solid rgba(226, 232, 240, 0.95) !important;
-            border-radius: 16px !important;
-            box-shadow: 0 28px 90px rgba(15, 23, 42, 0.20) !important;
-            backdrop-filter: blur(18px);
-            -webkit-backdrop-filter: blur(18px);
+            border-radius: 24px !important;
+            box-shadow: 0 28px 90px rgba(15, 23, 42, 0.26) !important;
+
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
         }
 
         body {
@@ -204,32 +222,17 @@ def render_detail_product(product):
 
         /* ===== BACK BUTTON ===== */
         div[data-testid="stButton"] {
-            /* width: fit-content !important; */
-            /* margin-bottom: 8px !important; */
             width: fit-content !important;
             margin: 0 0 16px 0 !important;
             padding: 0px !important;
         }
 
         div[data-testid="stButton"] button {
-            /* width: auto !important; */
-            /* min-width: 40px !important; */
-            /* height: 40px !important; */
-            /* min-height: 40px !important; */
-            /* padding: 0px 0px !important; */
-            /* border-radius: 10px !important; */
-            /* border: 1px solid #dbe3ef !important; */
-            /* background: #ffffff !important; */
-            /* color: #2563eb !important; */
-            /* font-size: 12px !important; */
-            /* font-weight: 650 !important; */
-            /* box-shadow: none !important; */
-            /* transition: all 0.18s ease !important; */
             width: auto !important;
             min-width: 70px !important;
-            height: 40px !important;
-            min-height: 40px !important;
-            padding: 0px 10px 0px 5px !important;
+            height: 35px !important;
+            min-height: 35px !important;
+            padding: 0px 12px 0px 5px !important;
 
             display: inline-flex !important;
             flex-direction: row !important;
@@ -347,7 +350,7 @@ def render_detail_product(product):
         }
 
         .detail-title {
-            font-size: 27px;
+            font-size: 24px;
             line-height: 1.32;
             color: #0f172a;
             font-weight: 850;
@@ -465,6 +468,102 @@ def render_detail_product(product):
         .image-discount-note p {
             margin: 0;
         }
+        
+        /* ===== FINAL OVERRIDE DETAIL PRODUCT RIGHT CONTENT ===== */
+        section[data-testid="stMain"] .block-container .detail-info-wrap {
+            padding-top: 0px !important;
+        }
+
+        section[data-testid="stMain"] .block-container .detail-badge-row {
+            margin-bottom: 1px !important;
+        }
+
+        section[data-testid="stMain"] .block-container .detail-badge {
+            padding: 7px 14px !important;
+            border-radius: 999px !important;
+            font-size: 11px !important;
+            font-weight: 850 !important;
+        }
+
+        section[data-testid="stMain"] .block-container .detail-title {
+            font-size: 23px !important;
+            line-height: 1.32 !important;
+            color: #0f172a !important;
+            font-weight: 700 !important;
+            margin-bottom: 10px !important;
+            letter-spacing: -0.01em !important;
+        }
+
+        section[data-testid="stMain"] .block-container .detail-meta {
+            font-size: 13px !important;
+            color: #334155 !important;
+            margin-bottom: 20px !important;
+        }
+
+        section[data-testid="stMain"] .block-container .detail-price-box {
+            background: #f8f9ff !important;
+            border-radius: 18px !important;
+            padding: 12px 22px !important;
+            margin-bottom: 26px !important;
+            box-shadow: none !important;
+        }
+
+        section[data-testid="stMain"] .block-container .detail-original-price {
+            font-size: 14px !important;
+            color: #94a3b8 !important;
+            text-decoration: line-through !important;
+            margin-bottom: 4px !important;
+        }
+
+        section[data-testid="stMain"] .block-container .detail-price {
+            font-size: 30px !important;
+            font-weight: 950 !important;
+            color: #2563eb !important;
+            line-height: 1.15 !important;
+            margin: 4px 0 -1px 0 !important;
+        }
+
+        section[data-testid="stMain"] .block-container .detail-saving {
+            font-size: 13px !important;
+            color: #16a34a !important;
+            font-weight: 800 !important;
+        }
+
+        section[data-testid="stMain"] .block-container .shop-box {
+            border: 1px solid #e5e7eb !important;
+            border-radius: 14px !important;
+            padding: 14px 18px !important;
+            margin-bottom: 19px !important;
+            background: #ffffff !important;
+        }
+
+        section[data-testid="stMain"] .block-container .shop-name {
+            font-size: 15px !important;
+            font-weight: 550 !important;
+            color: #0f172a !important;
+            margin-bottom: 3px !important;
+            padding: 0 !important;
+        }
+
+        section[data-testid="stMain"] .block-container .shop-location {
+            color: #64748b !important;
+            font-size: 12px !important;
+        }
+
+        section[data-testid="stMain"] .block-container .action-row {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 18px !important;
+            margin: 18px 0 !important;
+        }
+
+        section[data-testid="stMain"] .block-container .market-action {
+            min-height: 44px !important;
+            border-radius: 11px !important;
+            font-size: 15px !important;
+            font-weight: 750 !important;
+        }
+
         </style>
         """,
         unsafe_allow_html=True,

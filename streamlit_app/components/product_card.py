@@ -97,9 +97,12 @@ def render_product_card(row, rank, key_prefix="product"):
     image_path = get_image_path(row.get("image_local_path"))
     image_src = image_to_base64(image_path) or placeholder_image()
 
-    umkm_label = str(row.get("umkm_label", "-")).upper().replace("_", "-")
+    try:
+        umkm_label = int(row.get("umkm_label", 0))
+    except:
+        umkm_label = 0
 
-    if umkm_label == "UMKM":
+    if umkm_label == 1:
         badge_class = "umkm"
         badge_text = "UMKM"
     else:

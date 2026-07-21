@@ -54,4 +54,6 @@ VALUE_DISCOUNT_WEIGHT = 0.30
 VALID_PAGES = [
     "Beranda",
     "Tentang",
+    "Admin",
+    "Detail Produk"
 ]

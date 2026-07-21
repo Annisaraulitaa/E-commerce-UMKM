@@ -38,16 +38,21 @@ CHECKPOINT_PATH = r"output3/shopinfo_core_state.json"
 
 # Untuk test awal, gunakan 20/50 dulu.
 # Jika sudah aman, naikkan bertahap: 100, 300, dst.
-LIMIT = 120
+LIMIT = 200
 
 # Simpan progress setiap N toko.
 SAVE_EVERY = 10
 
+# Auto running beberapa batch
+AUTO_RUN = True
+MAX_BATCHES = 20
+SLEEP_BETWEEN_BATCHES = (120, 300)  # jeda 2–5 menit antar batch
+
 # Delay agar tidak terlalu agresif.
-MIN_DELAY = 1.5
-MAX_DELAY = 3.5
-LONG_BREAK_EVERY = 60
-LONG_BREAK_RANGE = (60.0, 150.0)
+MIN_DELAY = 1.2
+MAX_DELAY = 2.8
+LONG_BREAK_EVERY = 100
+LONG_BREAK_RANGE = (45.0, 120.0)
 MAX_RETRIES = 4
 TIMEOUT = 60
 
@@ -675,10 +680,30 @@ def enrich_shopinfo_core(
 
 
 if __name__ == "__main__":
-    enrich_shopinfo_core(
-        input_csv=INPUT_CSV,
-        output_csv=OUTPUT_CSV,
-        checkpoint_path=CHECKPOINT_PATH,
-        limit=LIMIT,
-        save_every=SAVE_EVERY,
-    )
+    if AUTO_RUN:
+        for batch_no in range(1, MAX_BATCHES + 1):
+            print(f"\n[AUTO] Mulai batch {batch_no}/{MAX_BATCHES}")
+
+            enrich_shopinfo_core(
+                input_csv=INPUT_CSV,
+                output_csv=OUTPUT_CSV,
+                checkpoint_path=CHECKPOINT_PATH,
+                limit=LIMIT,
+                save_every=SAVE_EVERY,
+            )
+
+            if batch_no < MAX_BATCHES:
+                sleep_time = random.uniform(*SLEEP_BETWEEN_BATCHES)
+                print(f"[AUTO] Batch {batch_no} selesai. Istirahat {sleep_time/60:.1f} menit sebelum lanjut...")
+                time.sleep(sleep_time)
+
+        print("[AUTO] Semua batch selesai.")
+
+    else:
+        enrich_shopinfo_core(
+            input_csv=INPUT_CSV,
+            output_csv=OUTPUT_CSV,
+            checkpoint_path=CHECKPOINT_PATH,
+            limit=LIMIT,
+            save_every=SAVE_EVERY,
+        )
