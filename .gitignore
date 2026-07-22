@@ -1,0 +1,38 @@
+# =====================
+# DATASET & OUTPUT
+# =====================
+
+*.csv
+
+olahData/
+output/
+output2/
+output3/
+output4/
+check_dataset.ipynb
+
+# Kecualikan database aplikasi
+!streamlit_app/data/product_submissions.csv
+
+# =====================
+# OLD PROJECT
+# =====================
+
+streamlit_app_old/
+streamlit_app_old_V2/
+
+
+# =====================
+# PYTHON CACHE
+# =====================
+
+__pycache__/
+*.pyc
+
+
+# =====================
+# KEEP STREAMLIT APP DATA
+# =====================
+
+!streamlit_app/data/
+!streamlit_app/data/product_submissions.csv

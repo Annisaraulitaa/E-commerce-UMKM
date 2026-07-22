@@ -103,7 +103,7 @@ def render_detail_product(product):
     shop_name = html.escape(str(get_value(product, "shop_name", default="-")))
     shop_url = _clean_url(get_value(product, "shop_url", default=""))
     shop_city = html.escape(str(get_value(product, "shop_city", default="-")))
-    shop_tier = html.escape(str(get_value(product, "shop_tier", default="-")))
+    shop_district = html.escape(str(get_value(product,"shopinfo_shipping_district",default="-")))
 
     raw_umkm_label = get_value(
         product,
@@ -668,7 +668,7 @@ def render_detail_product(product):
         _html([
             '<div class="shop-box">',
             f'<div class="shop-name">{shop_name}</div>',
-            f'<div class="shop-location">📍 {shop_city} <span style="color:#94a3b8;">(Tier toko: {shop_tier})</span></div>',
+            f'<div class="shop-location">📍 {shop_city}, {shop_district}</div>',
             '</div>',
         ])
 

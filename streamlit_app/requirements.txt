@@ -1,0 +1,6 @@
+streamlit
+pandas
+numpy
+rank-bm25
+scikit-learn
+gdown

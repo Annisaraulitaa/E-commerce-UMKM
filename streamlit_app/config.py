@@ -4,7 +4,14 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = BASE_DIR.parent
 
-DATA_PATH = PROJECT_DIR / "olahData" / "preprocessing" / "nondup_dataset.csv"
+
+# =========================================================
+# DATASET CONFIG
+# =========================================================
+
+DATA_ID = "1Eqk9BqquJDhzBr9kxLoibg1DxsyBr9YS"
+
+DATA_PATH_LOCAL = "nondup_dataset.csv"
 
 
 # =========================================================
