@@ -5,16 +5,16 @@ from rank_bm25 import BM25Okapi
 from config import (
     TOP_N_CANDIDATES,
     TOP_K_RESULTS,
-    FIRST_UMKM_QUOTA,
     WEIGHT_RELEVANCE,
     WEIGHT_POPULARITY,
     WEIGHT_VALUE,
-    WEIGHT_UMKM,
     POPULARITY_SOLD_WEIGHT,
     POPULARITY_REVIEW_WEIGHT,
     POPULARITY_TOTAL_RATING_WEIGHT,
     VALUE_RATING_WEIGHT,
     VALUE_DISCOUNT_WEIGHT,
+    BM25_K1,
+    BM25_B
 )
 
 from preprocessing_streamlit import tokenize
@@ -31,7 +31,11 @@ class UMKMRecommender:
         )
 
         self.tokenized_corpus = self.df["search_text"].apply(tokenize).tolist()
-        self.bm25 = BM25Okapi(self.tokenized_corpus)
+        self.bm25 = BM25Okapi(
+            self.tokenized_corpus,
+            k1=BM25_K1,
+            b=BM25_B
+        )
 
     def normalize_score(self, series):
         series = pd.to_numeric(series, errors="coerce").fillna(0)
@@ -59,8 +63,6 @@ class UMKMRecommender:
         weight_relevance=WEIGHT_RELEVANCE,
         weight_popularity=WEIGHT_POPULARITY,
         weight_value=WEIGHT_VALUE,
-        weight_umkm=WEIGHT_UMKM,
-        first_umkm_quota=FIRST_UMKM_QUOTA,
         popularity_sold_weight=POPULARITY_SOLD_WEIGHT,
         popularity_review_weight=POPULARITY_REVIEW_WEIGHT,
         popularity_total_rating_weight=POPULARITY_TOTAL_RATING_WEIGHT,
@@ -140,27 +142,14 @@ class UMKMRecommender:
         )
 
         # =====================================================
-        # 5. Fairness Boost
-        # lambda_umkm = 0.20
+        # 5. Final Score
         # =====================================================
-        result["umkm_score"] = result["umkm_binary"].astype(int)
-
         result["final_score"] = (
-            result["base_score"] +
-            weight_umkm * result["umkm_score"]
-        ).clip(0.0, 1.0)
+            result["base_score"]
+        )
 
         # Urutkan kandidat berdasarkan final_score
         result = result.sort_values("final_score", ascending=False)
-
-        # =====================================================
-        # 6. UMKM-first untuk memenuhi K=60 pertama
-        # =====================================================
-        umkm_first = result[result["umkm_binary"] == 1].head(first_umkm_quota)
-
-        remaining = result.drop(index=umkm_first.index)
-
-        result = pd.concat([umkm_first, remaining], axis=0)
 
         result = result.head(top_k_results).reset_index(drop=True)
         result["final_rank"] = np.arange(1, len(result) + 1)

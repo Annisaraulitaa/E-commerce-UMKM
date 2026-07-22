@@ -10,9 +10,9 @@ from components.product_registration import render_product_registration_flow
 from config import (
     INITIAL_DISPLAY,
     LOAD_MORE_STEP,
+    SEARCH_POOL_SIZE,
     WEIGHT_POPULARITY,
     WEIGHT_RELEVANCE,
-    WEIGHT_UMKM,
     WEIGHT_VALUE,
 )
 from utils import get_approved_submissions
@@ -23,7 +23,6 @@ FILTER_OPTIONS = ["Semua", "UMKM"]
 INITIAL_RANDOM_BATCH_SIZE = INITIAL_DISPLAY
 INITIAL_RANDOM_BATCH_LIMIT = 7
 INITIAL_RANDOM_MAX_DISPLAY = INITIAL_RANDOM_BATCH_SIZE * INITIAL_RANDOM_BATCH_LIMIT
-SEARCH_POOL_SIZE = 300
 
 
 def _html(markup):
@@ -1761,8 +1760,6 @@ def render_catalog_page(df, recommender):
                 weight_relevance=WEIGHT_RELEVANCE,
                 weight_popularity=WEIGHT_POPULARITY,
                 weight_value=WEIGHT_VALUE,
-                weight_umkm=WEIGHT_UMKM,
-                first_umkm_quota=INITIAL_DISPLAY,
             )
 
             st.session_state.result = result

@@ -34,9 +34,19 @@ if not approved_products.empty:
         st.session_state["approved_products_signature"] = approved_signature
         st.session_state.pop("catalog_initial_products", None)
 
-    df = pd.concat([approved_products, df], ignore_index=True)
-
 recommender = UMKMRecommender(df)
+
+catalog_df = df.copy()
+
+if not approved_products.empty:
+    catalog_df = pd.concat(
+        [
+            approved_products,
+            catalog_df
+        ],
+        ignore_index=True
+    )
+
 
 if "visible_count" not in st.session_state:
     st.session_state.visible_count = INITIAL_DISPLAY
@@ -63,10 +73,18 @@ if "page" in st.query_params:
 if "product_id" in st.query_params:
     product_id = str(st.query_params.get("product_id", "")).strip()
 
-    df["_route_id"] = df["id"].astype(str).str.strip()
+    route_df = catalog_df.copy()
 
-    matched_product = df[df["_route_id"] == product_id]
+    route_df["_route_id"] = (
+        route_df["id"]
+        .astype(str)
+        .str.strip()
+    )
 
+    matched_product = route_df[
+        route_df["_route_id"] == product_id
+    ]
+    
     if not matched_product.empty:
         st.session_state.selected_product = matched_product.iloc[0].to_dict()
         st.session_state.current_page = "Detail Produk"
@@ -85,7 +103,7 @@ if st.session_state.current_page not in [
     render_navbar()
 
 if st.session_state.current_page == "Beranda":
-    render_catalog_page(df, recommender)
+    render_catalog_page(catalog_df, recommender)
 
 elif st.session_state.current_page == "Detail Produk":
     selected_product = st.session_state.selected_product

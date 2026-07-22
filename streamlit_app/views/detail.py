@@ -173,18 +173,17 @@ def render_detail_product(product):
 
         /* Floating card utama */
         section[data-testid="stMain"] {
-            min-height: 100vh !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
+            min-height:100vh !important;
+            display:flex !important;
+            align-items:center !important;
         }
 
         .block-container {
-            max-width: 920px !important;
-            width: calc(100% - 180px) !important;
+            max-width: 900px !important;
+            width: 900 !important;
             min-height: auto !important;
-            margin: 20px auto 34px auto !important; 
-            padding: 22px 36px 30px 36px !important;
+            margin: auto !important; 
+            padding: 24px 36px !important;
 
             background: #ffffff !important;
             border: 1px solid rgba(226, 232, 240, 0.95) !important;
@@ -292,23 +291,22 @@ def render_detail_product(product):
         } 
 
         .product-image-card {
+            width:380px;
+            height:380px;
             background: #ffffff;
             border: 1px solid #e5e7eb;
             border-radius: 5px;
             padding: 3px;
-            min-height: auto;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
         }
 
         .product-image-card img {
             width: 100%;
-            max-height: 700px;
-            object-fit: cover;
+            height: 370px;
+            object-fit: contain;
             border-radius: 0px;
-            display: block;
         }
 
         .detail-empty-image {
@@ -324,7 +322,10 @@ def render_detail_product(product):
         }
 
         .detail-info-wrap {
-            padding-top: 0px;
+            width:100%;
+            max-width:450px;
+            display:flex;
+            flex-direction:column;
         }
 
         .detail-badge-row {
@@ -356,20 +357,26 @@ def render_detail_product(product):
             font-weight: 850;
             margin-bottom: 8px;
             letter-spacing: -0.01em;
+            display:-webkit-box !important;
+            -webkit-line-clamp:2 !important;
+            -webkit-box-orient:vertical !important;
+            overflow:hidden !important;
+            text-overflow:ellipsis;
+            min-height:60px !important;
         }
 
         .detail-meta {
-            font-size: 14px;
+            font-size: 13px;
             color: #334155;
-            margin-bottom: 24px;
+            margin-bottom: 12px;
         }
 
         .detail-price-box {
             background: #f8f9ff;
             border: none;
             border-radius: 18px;
-            padding: 20px 22px;
-            margin-bottom: 28px;
+            padding: 12px 22px;
+            margin-bottom: 14px;
             box-shadow: none;
         }
 
@@ -419,7 +426,7 @@ def render_detail_product(product):
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 14px;
-            margin-top: 2px;
+            margin-top: 18px !important;
         }
 
         .market-action {
@@ -602,7 +609,7 @@ def render_detail_product(product):
             f'</p>'
         )
 
-    col_img, col_info = st.columns([1.00, 1.20], gap="medium")
+    col_img, col_info = st.columns([1, 1], gap="large")
 
     with col_img:
         try:
@@ -629,6 +636,7 @@ def render_detail_product(product):
         _html(image_parts)
 
     with col_info:
+        
         _html([
             '<div class="detail-info-wrap">',
             '<div class="detail-badge-row">',

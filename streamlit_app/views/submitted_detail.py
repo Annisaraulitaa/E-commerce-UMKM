@@ -205,17 +205,17 @@ def render_submitted_product_detail(product):
                 display: flex;
                 justify-content: center;
                 align-items: flex-start;
-                padding: 80px 24px 60px 24px;
+                padding: 0px 24px 40px 24px;
             }
 
             .submitted-detail-card {
-                width: min(1180px, calc(100vw - 220px));
+                width: min(850px, calc(100vw - 220px));
                 box-sizing: border-box;
                 background: #ffffff;
                 border: 1px solid rgba(226, 232, 240, 0.95);
                 border-radius: 24px;
                 box-shadow: 0 28px 90px rgba(15, 23, 42, 0.26);
-                padding: 34px 36px 44px 36px;
+                padding: 16px 30px 28px;
             }
 
             /* ===== BACK BUTTON ===== */
@@ -223,37 +223,49 @@ def render_submitted_product_detail(product):
                 display: flex;
                 align-items: center;
                 justify-content: flex-start;
-                margin-bottom: 30px;
+                margin-bottom: 15px;
             }
 
             .submitted-back-button {
-                width: 118px;
-                min-height: 40px;
+                width: auto;
+                min-height: 35px;
                 box-sizing: border-box;
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
-                gap: 8px;
-                border-radius: 12px;
-                background: #2563eb;
-                color: #ffffff !important;
+                gap: 6px;
+                padding: 0px 12px 0px 8px;
+                border-radius: 7px;
+                background: transparent;
+                color: #64748b !important;
                 text-decoration: none !important;
-                border: none;
-                font-size: 15px;
-                font-weight: 750;
-                box-shadow: 0 8px 18px rgba(37, 99, 235, 0.25);
+                border: 1px solid #e5e7eb;
+                font-size: 14px;
+                font-weight: 500;
+                box-shadow: none;
             }
 
             .submitted-back-button:hover {
-                background: #1d4ed8;
-                color: #ffffff !important;
+                background: #f1f5f9;
+                color: #2563eb !important;
+                border-color:#cbd5e1;
+            }
+
+            .submitted-back-icon {
+                font-size:18px;
+                line-height:1;
+            }
+
+            .submitted-back-text {
+                font-size:14px;
+                font-weight:500;
             }
 
             /* ===== MAIN GRID ===== */
             .submitted-main-grid {
                 display: grid;
                 grid-template-columns: 1fr 1.2fr;
-                gap: 36px;
+                gap: 24px;
                 align-items: start;
             }
 
@@ -265,15 +277,19 @@ def render_submitted_product_detail(product):
             /* ===== IMAGE ===== */
             .submitted-product-image-card {
                 width: 100%;
+                height:340px;
                 border-radius: 20px;
                 overflow: hidden;
-                background: #f1f5f9;
+                background: #f8fafc;
                 border: 1px solid #e5e7eb;
+                display:flex;
+                align-items:center;
+                justify-content:center;
             }
 
             .submitted-product-image {
                 width: 100%;
-                height: 420px;
+                height: 100%;
                 object-fit: cover;
                 display: block;
             }
@@ -319,7 +335,7 @@ def render_submitted_product_detail(product):
                 line-height: 1.32;
                 color: #0f172a;
                 font-weight: 850;
-                margin: 0 0 10px 5px;
+                margin: 0;
                 letter-spacing: -0.01em;
             }
 
@@ -333,7 +349,7 @@ def render_submitted_product_detail(product):
             .submitted-price-box {
                 background: #f8f9ff;
                 border-radius: 18px;
-                padding: 18px 22px;
+                padding: 16px 22px;
                 margin-bottom: 14px;
             }
 
@@ -345,7 +361,7 @@ def render_submitted_product_detail(product):
             }
 
             .submitted-price {
-                font-size: 30px;
+                font-size: 32px;
                 font-weight: 950;
                 color: #2563eb;
                 line-height: 1.15;
@@ -355,8 +371,8 @@ def render_submitted_product_detail(product):
             .submitted-info-box {
                 border: 1px solid #e5e7eb;
                 border-radius: 14px;
-                padding: 14px 18px;
-                margin-bottom: 12px;
+                padding: 12px 16px;
+                margin-bottom: 10px;
                 background: #ffffff;
             }
 
@@ -374,8 +390,8 @@ def render_submitted_product_detail(product):
             }
 
             .submitted-description-box {
-                margin-top: 18px;
-                margin-bottom: 0;
+                margin-top: 12px;
+                padding:12px 16px;
             }
 
             /* ===== CONTACT ===== */
@@ -389,8 +405,8 @@ def render_submitted_product_detail(product):
             .submitted-contact-item {
                 background: #f8fafc;
                 border: 1px solid #e5e7eb;
-                border-radius: 10px;
-                padding: 10px 12px;
+                border-radius: 8px;
+                padding: 6px 10px;
                 font-size: 12px;
                 color: #64748b;
             }
@@ -398,7 +414,7 @@ def render_submitted_product_detail(product):
             .submitted-contact-label {
                 display: block;
                 color: #0f172a;
-                font-size: 13px;
+                font-size: 12px;
                 font-weight: 850;
                 margin-bottom: 3px;
             }
@@ -412,18 +428,18 @@ def render_submitted_product_detail(product):
             .submitted-action-row {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
-                gap: 14px;
-                margin-top: 14px;
+                gap: 10px;
+                margin-top: 12px;
             }
 
             .submitted-action-button {
-                min-height: 44px;
+                min-height: 40px;
                 border-radius: 11px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 text-decoration: none !important;
-                font-size: 15px;
+                font-size: 14px;
                 font-weight: 800;
             }
 
@@ -523,11 +539,6 @@ def render_submitted_product_detail(product):
         '<div class="submitted-info-title" data-component="contact-title">Kontak Penjual</div>',
         '<div class="submitted-contact-grid" data-component="contact-grid">',
 
-        '<div class="submitted-contact-item" data-component="owner-card">',
-        '<span class="submitted-contact-label">Pemilik Usaha</span>',
-        f'<span class="submitted-contact-value">{owner_name}</span>',
-        '</div>',
-
         '<div class="submitted-contact-item" data-component="email-card">',
         '<span class="submitted-contact-label">Email</span>',
         f'<span class="submitted-contact-value">{email}</span>',
@@ -536,11 +547,6 @@ def render_submitted_product_detail(product):
         '<div class="submitted-contact-item" data-component="whatsapp-card">',
         '<span class="submitted-contact-label">WhatsApp</span>',
         f'<span class="submitted-contact-value">{whatsapp_display}</span>',
-        '</div>',
-
-        '<div class="submitted-contact-item" data-component="status-card">',
-        '<span class="submitted-contact-label">Status</span>',
-        '<span class="submitted-contact-value">Sudah disetujui admin</span>',
         '</div>',
 
         '</div>',
