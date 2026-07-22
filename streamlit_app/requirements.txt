@@ -4,3 +4,5 @@ numpy
 rank-bm25
 scikit-learn
 gdown
+Pillow
+requests
