@@ -25,7 +25,11 @@ df = load_data()
 
 approved_products = load_approved_submitted_products()
 
-st.write(approved_products[["id", "source"]].head())
+st.write("SUBMITTED COLUMNS:")
+st.write(approved_products.columns.tolist())
+
+st.write("SUBMITTED DATA:")
+st.write(approved_products.head())
 
 if not approved_products.empty:
     approved_signature = "|".join(
