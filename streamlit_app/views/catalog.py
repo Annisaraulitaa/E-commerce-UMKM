@@ -1631,6 +1631,18 @@ def load_catalog_css():
             color:white !important;
         }
 
+        /* ===== SEARCH LOAD MORE BUTTON ===== */
+        .st-key-search_load_more {
+            display: flex !important;
+            justify-content: center !important;
+            width: 100% !important;
+        }
+
+        .st-key-search_load_more button {
+            width: auto !important;
+            min-width: 150px !important;
+        }
+
         @media (max-width: 1100px) {
             .market-image-wrap {
                 height: 220px;
@@ -1817,12 +1829,35 @@ def render_catalog_page(df, recommender):
             )
 
 
-            render_catalog_results(
-                result=filtered_result,
-                key_prefix="search_result",
-                show_load_more=True,
-                is_search_result=True,
+            visible_result = filtered_result.head(
+                st.session_state.visible_count
             )
+
+            render_catalog_info_bar(
+                result_view=visible_result,
+                total_result=len(filtered_result),
+                is_search_result=True,
+                query=query_clean
+            )
+
+            with st.container(key="search_result_grid_wrap"):
+                render_catalog_grid(
+                    result_view=visible_result,
+                    key_prefix="search_result"
+                )
+
+
+            if st.session_state.visible_count < len(filtered_result):
+
+                _html('<div class="load-more-spacer"></div>')
+
+                if st.button(
+                    "Muat Lebih Banyak",
+                    use_container_width=False,
+                    key="search_load_more"
+                ):
+                    st.session_state.visible_count += LOAD_MORE_STEP
+                    st.rerun()
 
     else:
         if st.session_state.catalog_view_mode != "initial":
