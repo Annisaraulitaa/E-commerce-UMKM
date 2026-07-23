@@ -670,6 +670,7 @@ def render_new_umkm_section():
         converted_products.append(
             {
                 "id": f"submission_{row.name}",
+                "source": "submission",
                 "name": row.get(
                     "product_name",
                     "-"
@@ -1047,24 +1048,26 @@ def load_catalog_css():
         }
 
         .catalog-info-bar {
-            max-width: 1380px;
+            width: 100% !important;
+            max-width: none !important;
             min-height: 42px;
-            margin: 5px auto 5px auto;
-            padding: 0 8px;
+            margin: 5px 0 5px 0;
+            padding: 0 16px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             color: #64748b;
             background-color: #ddeaf7;
             font-size: 13px;
+            box-sizing: border-box;
         }
 
         /* ===== NEW UMKM SECTION BAR ===== */
         .catalog-new-umkm-bar {
-            max-width: 1380px;
+            width: 100% !important;
             min-height: 42px;
-            margin: 5px auto 5px auto;
-            padding: 0 8px;
+            margin: 5px 0 5px 0;
+            padding: 0 16px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -1567,7 +1570,7 @@ def load_catalog_css():
             display:flex !important;
             align-items:center !important;
             padding-top: 12px;
-            gap:0px !important;
+            gap:8px !important;
         }
 
         .st-key-filter_sidebar_box div[data-testid="stCheckbox"] p {
