@@ -1,5 +1,6 @@
 import pandas as pd
 import streamlit as st
+from pathlib import Path
 
 from components.navbar import render_navbar
 from config import INITIAL_DISPLAY, VALID_PAGES
@@ -25,11 +26,19 @@ df = load_data()
 
 approved_products = load_approved_submitted_products()
 
-st.write("SUBMITTED COLUMNS:")
-st.write(approved_products.columns.tolist())
+st.write("APP PATH:")
+st.write(Path.cwd())
 
-st.write("SUBMITTED DATA:")
-st.write(approved_products.head())
+st.write("SUBMISSION FILE EXISTS:")
+st.write(Path("data/product_submissions.csv").exists())
+
+st.write("SUBMISSION RAW:")
+st.write(
+    pd.read_csv(
+        "data/product_submissions.csv",
+        dtype=str
+    ).head()
+)
 
 if not approved_products.empty:
     approved_signature = "|".join(
@@ -52,12 +61,6 @@ if not approved_products.empty:
         ],
         ignore_index=True
     )
-
-st.write(
-    catalog_df[
-        catalog_df["source"] == "submission"
-    ][["id", "source"]]
-)
 
 
 if "visible_count" not in st.session_state:
