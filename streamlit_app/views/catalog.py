@@ -1684,7 +1684,7 @@ def load_catalog_css():
 
 
 def render_catalog_page(df, recommender):
-    
+
     if st.query_params.get("product_id"):
         return
 
@@ -1808,14 +1808,6 @@ def render_catalog_page(df, recommender):
 
         with right_result:
 
-            render_catalog_info_bar(
-                result_view=filtered_result,
-                total_result=len(filtered_result),
-                is_search_result=True,
-                query=query_clean
-            )
-
-
             sort_mode = render_search_sort()
 
 
@@ -1825,11 +1817,11 @@ def render_catalog_page(df, recommender):
             )
 
 
-            render_catalog_grid(
-                result_view=filtered_result.head(
-                    st.session_state.visible_count
-                ),
-                key_prefix="search_result"
+            render_catalog_results(
+                result=filtered_result,
+                key_prefix="search_result",
+                show_load_more=True,
+                is_search_result=True,
             )
 
     else:
