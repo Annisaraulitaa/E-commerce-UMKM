@@ -413,7 +413,7 @@ def load_css():
             box-shadow: none !important;
         }
 
-                /* Tombol detail dibuat konsisten */
+        /* Tombol detail dibuat konsisten */
         div.stButton > button {
             min-height: 48px !important;
             border-radius: 12px !important;
@@ -562,6 +562,48 @@ def load_css():
 
         .st-key-admin_page {
             padding-top: 20px;
+        }
+
+        @media (max-width: 700px) {
+
+            /* CTA Daftar Produk Sekarang */
+            .catalog-register-cta {
+                flex-direction: row !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                gap: 12px !important;
+            }
+
+            .catalog-register-title {
+                font-size: 14px !important;
+                line-height: 1.3 !important;
+            }
+
+            .catalog-register-subtitle {
+                font-size: 12px !important;
+            }
+
+            .catalog-register-button {
+                height: 36px !important;
+                padding: 0 14px !important;
+                font-size: 13px !important;
+                flex-shrink: 0 !important;
+            }
+
+            /* Info Bar Menampilkan Produk */
+            .catalog-info-bar {
+                flex-direction: row !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                gap: 8px;
+            }
+
+            .catalog-info-left,
+            .catalog-info-right {
+                white-space: nowrap !important;
+                flex-wrap: nowrap !important;
+            }
+
         }
 
         </style>

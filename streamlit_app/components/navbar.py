@@ -123,13 +123,17 @@ def render_navbar():
 
 @media (max-width: 700px) {
     .umkm-navbar-inner {
-        flex-direction: column;
-        align-items: flex-start;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        width: 100% !important;
     }
 
     .umkm-nav-menu {
-        justify-content: flex-start;
+        justify-content: flex-end !important;
     }
+
+    
 }
 </style>
 """
