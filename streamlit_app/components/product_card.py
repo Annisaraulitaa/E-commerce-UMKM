@@ -88,11 +88,9 @@ def render_product_card(row, rank, key_prefix="product"):
     current_filter = st.session_state.get("catalog_filter", "Semua")
 
     detail_url = (
-        f"?page=Detail%20Produk"
+        f"?page=Beranda"
         f"&product_id={product_id}"
     )
-
-    st.write("DEBUG URL:", detail_url)
 
     image_path = get_image_path(row.get("image_local_path"))
     image_src = image_to_base64(image_path) or placeholder_image()
