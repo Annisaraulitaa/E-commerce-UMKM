@@ -92,7 +92,7 @@ def render_product_card(row, rank, key_prefix="product"):
     if source == "submission":
 
         detail_url = (
-            f"?page=SubmittedDetail"
+            f"?page=Detail%20Produk"
             f"&product_id={product_id}"
         )
 
