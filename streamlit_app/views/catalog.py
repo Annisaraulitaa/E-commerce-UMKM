@@ -1684,6 +1684,10 @@ def load_catalog_css():
 
 
 def render_catalog_page(df, recommender):
+    
+    if st.query_params.get("product_id"):
+        return
+
     if "result" not in st.session_state:
         st.session_state.result = pd.DataFrame()
 
