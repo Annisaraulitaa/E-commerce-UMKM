@@ -25,6 +25,8 @@ df = load_data()
 
 approved_products = load_approved_submitted_products()
 
+st.write(approved_products[["id", "source"]].head())
+
 if not approved_products.empty:
     approved_signature = "|".join(
         approved_products["id"].astype(str).str.strip().tolist()
@@ -46,6 +48,12 @@ if not approved_products.empty:
         ],
         ignore_index=True
     )
+
+st.write(
+    catalog_df[
+        catalog_df["source"] == "submission"
+    ][["id", "source"]]
+)
 
 
 if "visible_count" not in st.session_state:
@@ -101,6 +109,9 @@ if st.session_state.current_page not in [
     "Admin"
 ]:
     render_navbar()
+
+st.write("DEBUG PAGE:", st.session_state.current_page)
+st.write("DEBUG PRODUCT:", st.session_state.selected_product)
 
 if st.session_state.current_page == "Beranda":
     render_catalog_page(catalog_df, recommender)

@@ -76,5 +76,6 @@ VALID_PAGES = [
     "Beranda",
     "Tentang",
     "Admin",
-    "Detail Produk"
+    "Detail Produk",
+    "SubmittedDetail"
 ]
