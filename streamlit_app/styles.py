@@ -564,14 +564,41 @@ def load_css():
             padding-top: 20px;
         }
 
+        /* ===== MOBILE NAVBAR ===== */
         @media (max-width: 700px) {
+
+            .umkm-navbar-inner {
+                flex-direction: row !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                padding: 8px 12px !important;
+                gap: 12px !important;
+                width: 100% !important;
+            }
+
+            .umkm-nav-menu {
+                justify-content: flex-end !important;
+                width: auto !important;
+            }
+
+            .umkm-brand {
+                flex: 1 1 auto !important; /* Brand fleksibel */
+            }
+
+            .umkm-register-nav {
+                flex-shrink: 0 !important;
+                padding: 6px 12px !important;
+                font-size: 13px !important;
+            }
 
             /* CTA Daftar Produk Sekarang */
             .catalog-register-cta {
                 flex-direction: row !important;
                 align-items: center !important;
                 justify-content: space-between !important;
-                gap: 12px !important;
+                gap: 8px !important;
+                width: 100% !important;
+                padding: 12px 8px !important;
             }
 
             .catalog-register-title {
@@ -595,7 +622,7 @@ def load_css():
                 flex-direction: row !important;
                 align-items: center !important;
                 justify-content: space-between !important;
-                gap: 8px;
+                gap: 6px;
             }
 
             .catalog-info-left,
