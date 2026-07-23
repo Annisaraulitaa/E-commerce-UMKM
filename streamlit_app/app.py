@@ -26,20 +26,6 @@ df = load_data()
 
 approved_products = load_approved_submitted_products()
 
-st.write("APP PATH:")
-st.write(Path.cwd())
-
-st.write("SUBMISSION FILE EXISTS:")
-st.write(Path("data/product_submissions.csv").exists())
-
-st.write("SUBMISSION RAW:")
-st.write(
-    pd.read_csv(
-        "data/product_submissions.csv",
-        dtype=str
-    ).head()
-)
-
 if not approved_products.empty:
     approved_signature = "|".join(
         approved_products["id"].astype(str).str.strip().tolist()
