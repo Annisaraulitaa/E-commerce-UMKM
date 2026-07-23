@@ -3,7 +3,13 @@ from pathlib import Path
 import pandas as pd
 
 
-SUBMISSION_FILE = Path("data/product_submissions.csv")
+BASE_DIR = Path(__file__).resolve().parent
+
+SUBMISSION_FILE = (
+    BASE_DIR
+    / "data"
+    / "product_submissions.csv"
+)
 
 
 def _get_series(df, column_name, default=""):
