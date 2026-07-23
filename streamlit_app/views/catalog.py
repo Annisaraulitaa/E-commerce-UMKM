@@ -23,6 +23,7 @@ FILTER_OPTIONS = ["Semua", "UMKM"]
 INITIAL_RANDOM_BATCH_SIZE = INITIAL_DISPLAY
 INITIAL_RANDOM_BATCH_LIMIT = 7
 INITIAL_RANDOM_MAX_DISPLAY = INITIAL_RANDOM_BATCH_SIZE * INITIAL_RANDOM_BATCH_LIMIT
+NEW_UMKM_DISPLAY = 15
 
 
 def _html(markup):
@@ -721,10 +722,9 @@ def render_new_umkm_section():
     ):
 
         render_catalog_grid(
-            result_view=new_df.head(5),
+            result_view=new_df.head(NEW_UMKM_DISPLAY),
             key_prefix="new_umkm"
         )
-
 
 def load_catalog_css():
     _html(
