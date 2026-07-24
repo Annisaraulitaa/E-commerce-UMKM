@@ -2762,6 +2762,10 @@ def render_catalog_page(df, recommender):
         initial_products = get_initial_products(df, n=INITIAL_RANDOM_MAX_DISPLAY)
         filtered_initial = apply_catalog_filter(initial_products, filter_mode)
 
+        filtered_initial = filtered_initial.copy()
+        if "image_url" not in filtered_initial.columns:
+            filtered_initial["image_url"] = ""
+
         render_new_umkm_section()
 
         render_catalog_results(

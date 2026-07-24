@@ -34,7 +34,7 @@ TOP_N_CANDIDATES = 2000
 # SEARCH RESULT CONFIG
 # =========================================================
 # Kandidat yang dikirim ke halaman katalog
-SEARCH_POOL_SIZE = 300
+SEARCH_POOL_SIZE = 600
 # Jumlah rekomendasi final
 TOP_K_RESULTS = 60
 

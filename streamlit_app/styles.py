@@ -548,7 +548,7 @@ def load_css():
         div[data-testid="stButton"] button {
             height: 44px !important;
             min-height: 44px !important;
-            padding: 0 16px !important;
+            padding: 0 12px !important;
             box-sizing: border-box !important;
             border-radius: 11px !important;
             display: flex !important;

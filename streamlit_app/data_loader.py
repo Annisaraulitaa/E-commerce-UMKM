@@ -27,4 +27,9 @@ def load_data():
         .astype(int)
     )
 
+    if "image_url" in df.columns:
+        df["image_display"] = df["image_url"].fillna("")  # fallback kalau kosong
+    else:
+        df["image_display"] = df["image_local_path"].fillna("")
+
     return df

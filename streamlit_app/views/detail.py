@@ -183,7 +183,7 @@ def render_detail_product(product):
             width: 900 !important;
             min-height: auto !important;
             margin: auto !important; 
-            padding: 24px 36px !important;
+            padding: 24px 36px 40px 36px !important;
 
             background: #ffffff !important;
             border: 1px solid rgba(226, 232, 240, 0.95) !important;
@@ -199,7 +199,7 @@ def render_detail_product(product):
         }
 
         div[data-testid="stElementContainer"]:has(div[data-testid="stButton"]) {
-            margin-bottom: 12px !important;
+            margin-bottom: 8px !important;
             padding-bottom: 0px !important;
         }
 

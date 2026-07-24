@@ -113,8 +113,27 @@ def render_product_card(row, rank, key_prefix="product"):
     if current_filter:
         detail_url += f"&catalog_filter={quote(current_filter)}"
 
-    image_path = get_image_path(row.get("image_local_path"))
-    image_src = image_to_base64(image_path) or placeholder_image()
+    image_url = row.get("image_url")
+    image_local = row.get("image_local_path")
+
+    if image_url:
+        image_src = image_url
+
+    elif image_local:
+        try:
+            resolved_path = get_image_path(image_local)
+
+            if resolved_path:
+                image_src = image_to_base64(resolved_path)
+            else:
+                image_src = placeholder_image()
+
+        except Exception:
+            image_src = placeholder_image()
+
+    else:
+        image_src = placeholder_image()
+        
 
     try:
         umkm_label = int(row.get("umkm_label", 0))
