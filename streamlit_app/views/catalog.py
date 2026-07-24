@@ -296,45 +296,47 @@ def render_search_filter_panel(data):
     # ==================
 
     st.markdown(
-        "<div class='filter-section-title'>Harga</div>",
+        "<div class='filter-section-title price-filter-title'>Harga</div>",
         unsafe_allow_html=True
     )
 
+    with st.container(key="price_filter_row"):
 
-    price_col1, price_col2, price_col3 = st.columns(
-        [1, 1, 0.72],
-        gap="small"
-    )
-
-
-    with price_col1:
-        min_price = st.number_input(
-            "Harga Min",
-            min_value=0,
-            value=None,
-            placeholder="Harga Min",
-            label_visibility="collapsed"
+        price_col1, price_col2, price_col3 = st.columns(
+            [1, 1, 0.7],
+            gap="small"
         )
 
 
-    with price_col2:
-        max_price = st.number_input(
-            "Harga Maks",
-            min_value=0,
-            value=None,
-            placeholder="Harga Maks",
-            label_visibility="collapsed"
-        )
-    
-    with price_col3:
-        if st.button(
-            "PAKAI",
-            use_container_width=True,
-            key="apply_price_filter"
-        ):
-            st.session_state.price_min_filter = min_price
-            st.session_state.price_max_filter = max_price
-            st.rerun()
+        with price_col1:
+            min_price = st.number_input(
+                "Harga Min",
+                min_value=0,
+                value=None,
+                placeholder="Min",
+                label_visibility="collapsed"
+            )
+
+
+        with price_col2:
+            max_price = st.number_input(
+                "Harga Maks",
+                min_value=0,
+                value=None,
+                placeholder="Maks",
+                label_visibility="collapsed"
+            )
+        
+        with price_col3:
+            if st.button(
+                "✓",
+                use_container_width=True,
+                key="apply_price_filter",
+                help="Terapkan filter harga"
+            ):
+                st.session_state.price_min_filter = min_price
+                st.session_state.price_max_filter = max_price
+                st.rerun()
 
 
     if "price_number" in filtered.columns:
@@ -1390,11 +1392,16 @@ def load_catalog_css():
             margin-bottom:20px !important;
         }
 
+        .st-key-filter_sidebar_box .price-filter-title {
+            margin-top: 18px !important;
+            margin-bottom: 10px !important;
+        }
+
         /* ===== FILTER SECTION TITLE ===== */
         .st-key-filter_sidebar_box .filter-section-title,
         .st-key-filter_sidebar_box div[data-testid="stWidgetLabel"] p {
             font-size:14px !important;
-            font-weight:0 !important;
+            font-weight:400 !important;
             color:#1e293b !important;
             margin-top:18px !important;
             margin-bottom:10px !important;
@@ -1429,8 +1436,8 @@ def load_catalog_css():
         }
 
         .st-key-filter_sidebar_box div[data-testid="stNumberInput"] {
-            width:80px !important;
-            margin-top: 8px !important;
+            width: 100% !important;
+            margin-top: 0 !important;
         }
 
         /* Input harga */
@@ -1475,23 +1482,12 @@ def load_catalog_css():
         }
 
         .st-key-filter_sidebar_box div[data-testid="stHorizontalBlock"] {
-            gap:16px !important;
+            gap:8px !important;
         }
 
         /* placeholder */
         .st-key-filter_sidebar_box input::placeholder {
             color:#94a3b8 !important;
-        }
-
-        /* Tombol PAKAI */
-        .st-key-filter_sidebar_box .st-key-apply_price_filter button {
-            width:70px !important;
-            height:20px !important;
-            background:#2563eb !important;
-            color:white !important;
-            border-radius:10px !important;
-            font-size:10px !important;
-            font-weight:0 !important;
         }
 
         /* FILTER LEFT SPACING */
@@ -1622,6 +1618,91 @@ def load_catalog_css():
             }
         }
 
+        /* ===== FILTER HARGA DESKTOP ===== */
+        @media (min-width: 701px) {
+            .st-key-filter_sidebar_box {
+                padding-left: 24px !important;
+                padding-right: 16px !important;
+            }
+
+            .st-key-price_filter_row {
+                width: 100% !important;
+            }
+
+            .st-key-price_filter_row div[data-testid="stHorizontalBlock"] {
+                display: flex !important;
+                width: 100% !important;
+                gap: 6px !important;
+                align-items: flex-end !important;
+            }
+
+            .st-key-price_filter_row div[data-testid="column"] {
+                min-width: 0 !important;
+                padding: 0 !important;
+            }
+
+            .st-key-price_filter_row div[data-testid="column"]:nth-child(1),
+            .st-key-price_filter_row div[data-testid="column"]:nth-child(2) {
+                flex: 1 1 0 !important;
+                width: auto !important;
+            }
+
+            .st-key-price_filter_row div[data-testid="column"]:nth-child(3) {
+                flex: 0 0 38px !important;
+                width: 38px !important;
+                min-width: 38px !important;
+                max-width: 38px !important;
+            }
+
+            .st-key-price_filter_row div[data-testid="stNumberInput"] {
+                width: 100% !important;
+                margin: 0 !important;
+            }
+
+            .st-key-price_filter_row div[data-testid="stNumberInput"] input {
+                width: 100% !important;
+                height: 38px !important;
+                min-height: 38px !important;
+                padding: 0 8px !important;
+                font-size: 11px !important;
+                text-align: center !important;
+                box-sizing: border-box !important;
+            }
+
+            .st-key-price_filter_row .st-key-apply_price_filter {
+                width: 38px !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            .st-key-price_filter_row .st-key-apply_price_filter button {
+                width: 38px !important;
+                min-width: 38px !important;
+                max-width: 38px !important;
+                height: 38px !important;
+                min-height: 38px !important;
+                padding: 0 !important;
+                margin: 0 !important;
+
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+
+                background: #2563eb !important;
+                color: #ffffff !important;
+                border: 1px solid #2563eb !important;
+                border-radius: 10px !important;
+            }
+
+            .st-key-price_filter_row .st-key-apply_price_filter button p {
+                margin: 0 !important;
+                padding: 0 !important;
+                font-size: 18px !important;
+                font-weight: 800 !important;
+                line-height: 1 !important;
+            }
+        }
+
         @media (max-width: 700px) {
             .catalog-hero {
                 border-radius: 0 0 18px 18px;
@@ -1725,12 +1806,28 @@ def load_catalog_css():
             }
 
             .st-key-filter_sidebar_box .st-key-apply_price_filter button {
-                width: 72px !important;
-                min-width: 72px !important;
+                width: 44px !important;
+                min-width: 44px !important;
+                max-width: 44px !important;
                 height: 36px !important;
                 min-height: 36px !important;
                 margin: 0 !important;
-                padding: 0 10px !important;
+                padding: 0 !important;
+
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+
+                font-size: 17px !important;
+                line-height: 1 !important;
+            }
+
+            .st-key-filter_sidebar_box .st-key-apply_price_filter button p {
+                margin: 0 !important;
+                padding: 0 !important;
+                font-size: 17px !important;
+                font-weight: 800 !important;
+                line-height: 1 !important;
             }
 
             .st-key-initial_product_grid_wrap,
