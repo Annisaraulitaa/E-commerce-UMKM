@@ -576,34 +576,39 @@ def render_detail_product(product):
             section[data-testid="stMain"] {
                 min-height: 100vh !important;
                 display: block !important;
-                padding: 12px 0 24px 0 !important;
+                padding: 14px 0 34px 0 !important;
             }
 
+            div[data-testid="stMainBlockContainer"],
             .block-container {
-                width: calc(100% - 20px) !important;
-                max-width: calc(100% - 20px) !important;
-                margin: 0 10px !important;
-                padding: 16px 14px 22px 14px !important;
-                border-radius: 18px !important;
+                width: calc(100% - 28px) !important;
+                max-width: 680px !important;
+                min-height: auto !important;
+                margin: 0 auto !important;
+                padding: 18px 18px 34px 18px !important;
+                border-radius: 22px !important;
                 box-sizing: border-box !important;
             }
 
             div[data-testid="stElementContainer"]:has(
                 div[data-testid="stButton"]
             ) {
-                margin-bottom: 8px !important;
+                margin-bottom: 10px !important;
             }
 
             div[data-testid="stButton"] {
-                margin-bottom: 8px !important;
+                margin-bottom: 10px !important;
             }
 
             /* Ubah dua kolom gambar dan informasi menjadi satu kolom */
             section[data-testid="stMain"]
             .block-container
             div[data-testid="stHorizontalBlock"] {
-                display: block !important;
+                display: flex !important;
+                flex-direction: column !important;
                 width: 100% !important;
+                gap: 0 !important;
+                align-items: stretch !important;
             }
 
             section[data-testid="stMain"]
@@ -612,71 +617,38 @@ def render_detail_product(product):
             > div[data-testid="column"] {
                 width: 100% !important;
                 min-width: 0 !important;
-                flex: none !important;
+                max-width: 100% !important;
+                flex: 0 0 auto !important;
                 padding: 0 !important;
-            }
-
-            /* Beri jarak antara kolom gambar dan kolom informasi produk */
-            section[data-testid="stMain"]
-            .block-container
-            div[data-testid="stHorizontalBlock"]
-            > div[data-testid="column"]:nth-child(2) {
-                margin-top: 20px !important;
-                padding-top: 0 !important;
+                margin: 0 !important;
             }
 
             .product-image-card {
                 width: 100% !important;
                 height: auto !important;
                 min-height: 0 !important;
-                padding: 3px !important;
+                aspect-ratio: 1 / 1 !important;
+                padding: 4px !important;
                 box-sizing: border-box !important;
-                border-radius: 10px !important;
+                border-radius: 16px !important;
+                margin: 0 !important;
             }
 
             .product-image-card img {
                 width: 100% !important;
-                height: auto !important;
-                max-height: 390px !important;
+                height: 100% !important;
+                max-height: none !important;
                 aspect-ratio: 1 / 1 !important;
                 object-fit: contain !important;
                 display: block !important;
-            }
-
-            .image-discount-note {
-                margin: 8px 0 14px 0 !important;
-                padding: 0 4px !important;
-                font-size: 13px !important;
-                line-height: 1.45 !important;
+                border-radius: 12px !important;
             }
 
             .detail-info-wrap {
                 width: 100% !important;
                 max-width: none !important;
-                padding-top: 0px !important;
-            }
-
-            section[data-testid="stMain"]
-            .block-container
-            .detail-badge-row {
-                margin: 0 0 10px 0 !important;
                 padding: 0 !important;
-            }
-
-            section[data-testid="stMain"]
-            .block-container
-            .product-image-card {
-                margin-bottom: 0 !important;
-            }
-
-            section[data-testid="stMain"]
-            .block-container
-            .detail-badge {
-                position: static !important;
-                top: 0 !important;
-                left: 0 !important;
                 margin: 0 !important;
-                transform: none !important;
             }
 
             section[data-testid="stMain"]
@@ -685,8 +657,8 @@ def render_detail_product(product):
                 min-height: 0 !important;
                 max-height: none !important;
                 font-size: 21px !important;
-                line-height: 1.3 !important;
-                margin-bottom: 8px !important;
+                line-height: 1.34 !important;
+                margin-bottom: 10px !important;
                 -webkit-line-clamp: 3 !important;
             }
 
@@ -694,7 +666,7 @@ def render_detail_product(product):
             .block-container
             .detail-meta {
                 font-size: 12.5px !important;
-                line-height: 1.5 !important;
+                line-height: 1.55 !important;
                 margin-bottom: 14px !important;
                 white-space: normal !important;
             }
@@ -702,9 +674,9 @@ def render_detail_product(product):
             section[data-testid="stMain"]
             .block-container
             .detail-price-box {
-                padding: 12px 14px !important;
+                padding: 14px 16px !important;
                 margin-bottom: 14px !important;
-                border-radius: 14px !important;
+                border-radius: 16px !important;
             }
 
             section[data-testid="stMain"]
@@ -716,8 +688,8 @@ def render_detail_product(product):
             section[data-testid="stMain"]
             .block-container
             .shop-box {
-                padding: 12px 14px !important;
-                margin-bottom: 12px !important;
+                padding: 14px 16px !important;
+                margin-bottom: 14px !important;
             }
 
             section[data-testid="stMain"]
@@ -732,12 +704,109 @@ def render_detail_product(product):
             .block-container
             .market-action {
                 width: 100% !important;
-                min-height: 42px !important;
+                min-height: 44px !important;
                 box-sizing: border-box !important;
             }
 
+            /* ===== FINAL SPACING FIX MOBILE ===== */
+            /* Pastikan kolom informasi selalu benar-benar berada setelah kolom gambar */
+            section[data-testid="stMain"]
+            .block-container
+            div[data-testid="stHorizontalBlock"]
+            > div[data-testid="column"]:nth-child(2) {
+                position: relative !important;
+                clear: both !important;
+                margin-top: 24px !important;
+                padding-top: 0 !important;
+            }
+
+            /* Jika produk memiliki tulisan diskon, beri jarak tambahan sebelum badge */
+            section[data-testid="stMain"]
+            .block-container
+            div[data-testid="column"]:first-child:has(.image-discount-note)
+            + div[data-testid="column"] {
+                margin-top: 32px !important;
+            }
+
+            /* Pastikan tulisan diskon memiliki ruang bawah sendiri */
+            section[data-testid="stMain"]
+            .block-container
+            .image-discount-note {
+                display: block !important;
+                position: relative !important;
+                width: 100% !important;
+                margin: 12px 4px 0 4px !important;
+                padding-bottom: 0 !important;
+                box-sizing: border-box !important;
+                font-size: 13px !important;
+                line-height: 1.5 !important;
+            }
+
+            /* Badge harus mengikuti alur normal, bukan menempel ke konten sebelumnya */
+            section[data-testid="stMain"]
+            .block-container
+            .detail-badge-row {
+                display: flex !important;
+                position: relative !important;
+                clear: both !important;
+                width: 100% !important;
+                margin: 0 0 7px 0 !important;
+                padding: 0 !important;
+                overflow: visible !important;
+            }
+
+            section[data-testid="stMain"]
+            .block-container
+            .detail-badge {
+                position: static !important;
+                top: auto !important;
+                right: auto !important;
+                bottom: auto !important;
+                left: auto !important;
+                transform: none !important;
+                margin: 24px 0 0 0 !important;
+            }
+
+            /* Jarak nyata antara box harga dan box informasi toko */
+            section[data-testid="stMain"]
+            .block-container
+            div[data-testid="stElementContainer"]:has(.detail-price-box) {
+                margin-bottom: 16px !important;
+                padding-bottom: 0 !important;
+            }
+
+            section[data-testid="stMain"]
+            .block-container
+            .detail-price-box {
+                margin: 0 !important;
+            }
+
+            /* Jarak antara informasi toko dan tombol */
+            section[data-testid="stMain"]
+            .block-container
+            div[data-testid="stElementContainer"]:has(.shop-box) {
+                margin-bottom: 16px !important;
+                padding-bottom: 0 !important;
+            }
+
+            section[data-testid="stMain"]
+            .block-container
+            .shop-box {
+                margin: 0 !important;
+            }
+
+            /* Tombol dimulai setelah informasi toko, tidak berhimpitan */
+            section[data-testid="stMain"]
+            .block-container
+            .action-row {
+                margin-top: 0 !important;
+            }
+
+            /* Tambah ruang putih pada bagian paling bawah card */
+            section[data-testid="stMain"]
+            .block-container
             .bottom-card-space {
-                height: 8px !important;
+                height: 28px !important;
             }
         }
 
