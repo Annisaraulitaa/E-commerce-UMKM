@@ -2120,31 +2120,90 @@ def load_catalog_css():
             -webkit-text-fill-color: #1d4ed8 !important;
         }
 
-        /* ===== INPUT HARGA ===== */
-        .st-key-price_filter_row div[data-testid="stTextInput"],
-        .st-key-price_filter_row div[data-testid="stTextInput"] > div,
-        .st-key-price_filter_row div[data-testid="stTextInput"] div[data-baseweb="input"],
-        .st-key-price_filter_row div[data-testid="stTextInput"] div[data-baseweb="base-input"] {
-            background: #ffffff !important;
-            background-color: #ffffff !important;
-            border-color: #cbd5e1 !important;
-            color: #111827 !important;
-            box-shadow: none !important;
-            color-scheme: only light !important;
-        }
+        /* ===== INPUT HARGA TEXT INPUT ===== */
 
-        .st-key-price_filter_row div[data-testid="stTextInput"] input {
+        /* Wrapper luar harus transparan */
+        .st-key-price_filter_row div[data-testid="stTextInput"],
+        .st-key-price_filter_row div[data-testid="stTextInput"] > div {
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
             background: transparent !important;
             background-color: transparent !important;
+        }
+
+        /* Kotak input yang sebenarnya */
+        .st-key-price_filter_row
+        div[data-testid="stTextInput"]
+        div[data-baseweb="input"] {
+            width: 100% !important;
+            height: 38px !important;
+            min-height: 38px !important;
+
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 10px !important;
+            box-shadow: none !important;
+            overflow: hidden !important;
+            box-sizing: border-box !important;
+        }
+
+        /* Lapisan internal jangan membuat box tambahan */
+        .st-key-price_filter_row
+        div[data-testid="stTextInput"]
+        div[data-baseweb="base-input"] {
+            width: 100% !important;
+            height: 100% !important;
+            background: transparent !important;
+            background-color: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+
+        /* Input teks */
+        .st-key-price_filter_row
+        div[data-testid="stTextInput"]
+        input {
+            width: 100% !important;
+            height: 36px !important;
+            min-height: 36px !important;
+
+            padding: 0 10px !important;
+            margin: 0 !important;
+
+            background: transparent !important;
+            background-color: transparent !important;
+
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+
             color: #111827 !important;
             -webkit-text-fill-color: #111827 !important;
             caret-color: #111827 !important;
+
+            font-size: 12px !important;
+            text-align: left !important;
+            box-sizing: border-box !important;
         }
 
-        .st-key-price_filter_row div[data-testid="stTextInput"] input::placeholder {
+        /* Placeholder */
+        .st-key-price_filter_row
+        div[data-testid="stTextInput"]
+        input::placeholder {
             color: #94a3b8 !important;
             -webkit-text-fill-color: #94a3b8 !important;
             opacity: 1 !important;
+        }
+
+        /* Border ketika input aktif */
+        .st-key-price_filter_row
+        div[data-testid="stTextInput"]
+        div[data-baseweb="input"]:focus-within {
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.15) !important;
         }
 
         /* ===== CHECKBOX ===== */
