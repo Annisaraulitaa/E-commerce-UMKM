@@ -419,10 +419,10 @@ def render_search_filter_panel(data):
 
 
     rating_options = [
-        "★ 5",
-        "★ 4 ke atas",
-        "★ 3 ke atas",
-        "★ 2 ke atas"
+        "⭐ 5",
+        "⭐ 4 ke atas",
+        "⭐ 3 ke atas",
+        "⭐ 2 ke atas"
     ]
 
 
@@ -452,28 +452,28 @@ def render_search_filter_panel(data):
     if rating_filter and "ratingAverage" in filtered.columns:
 
 
-        if rating_filter == "★ 5":
+        if rating_filter == "⭐ 5":
 
             filtered = filtered[
                 filtered["ratingAverage"] >= 5
             ]
 
 
-        elif rating_filter == "★ 4 ke atas":
+        elif rating_filter == "⭐ 4 ke atas":
 
             filtered = filtered[
                 filtered["ratingAverage"] >= 4
             ]
 
 
-        elif rating_filter == "★ 3 ke atas":
+        elif rating_filter == "⭐ 3 ke atas":
 
             filtered = filtered[
                 filtered["ratingAverage"] >= 3
             ]
 
 
-        elif rating_filter == "★ 2 ke atas":
+        elif rating_filter == "⭐ 2 ke atas":
 
             filtered = filtered[
                 filtered["ratingAverage"] >= 2
@@ -1532,6 +1532,24 @@ def load_catalog_css():
             margin: 0 !important;
         }
 
+        /* Hilangkan tombol clear (×), plus (+), dan minus (-) pada NumberInput */
+        .st-key-filter_sidebar_box
+        div[data-testid="stNumberInput"]
+        button {
+            display: none !important;
+            visibility: hidden !important;
+            width: 0 !important;
+            min-width: 0 !important;
+            max-width: 0 !important;
+            height: 0 !important;
+            min-height: 0 !important;
+            max-height: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: 0 !important;
+            overflow: hidden !important;
+        }
+
         .st-key-filter_sidebar_box div[data-testid="stHorizontalBlock"] {
             gap:8px !important;
         }
@@ -2285,6 +2303,169 @@ def load_catalog_css():
             -webkit-text-fill-color: #111827 !important;
             -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
             box-shadow: 0 0 0 1000px #ffffff inset !important;
+        }
+
+        /* ===== NUMBER INPUT MOBILE TANPA X, MINUS, PLUS ===== */
+        @media (max-width: 700px) {
+
+            .st-key-price_filter_row
+            div[data-testid="stNumberInput"]
+            button {
+                display: none !important;
+                visibility: hidden !important;
+                width: 0 !important;
+                min-width: 0 !important;
+                max-width: 0 !important;
+                height: 0 !important;
+                min-height: 0 !important;
+                max-height: 0 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                border: 0 !important;
+                overflow: hidden !important;
+            }
+
+            .st-key-price_filter_row
+            div[data-testid="stNumberInput"]
+            div[data-baseweb="input"],
+
+            .st-key-price_filter_row
+            div[data-testid="stNumberInput"]
+            div[data-baseweb="base-input"] {
+                width: 100% !important;
+                min-width: 0 !important;
+                background: #ffffff !important;
+                background-color: #ffffff !important;
+                border-radius: 10px !important;
+                overflow: hidden !important;
+            }
+
+            .st-key-price_filter_row
+            div[data-testid="stNumberInput"]
+            input {
+                width: 100% !important;
+                height: 38px !important;
+                min-height: 38px !important;
+                padding: 0 10px !important;
+                text-align: left !important;
+                background: #ffffff !important;
+                background-color: #ffffff !important;
+                color: #111827 !important;
+                -webkit-text-fill-color: #111827 !important;
+                box-sizing: border-box !important;
+            }
+        }
+
+        /* ===== MOBILE DARK MODE FIX ===== */
+        @media (max-width: 700px) and (prefers-color-scheme: dark) {
+
+            /* Search input tetap putih */
+            .st-key-catalog_hero_block
+            div[data-testid="stTextInput"]
+            div[data-baseweb="input"] {
+                background: #ffffff !important;
+                background-color: #ffffff !important;
+                border-color: rgba(255, 255, 255, 0.45) !important;
+                color-scheme: only light !important;
+            }
+
+            .st-key-catalog_hero_block
+            div[data-testid="stTextInput"]
+            div[data-baseweb="base-input"] {
+                background: transparent !important;
+                background-color: transparent !important;
+                color-scheme: only light !important;
+            }
+
+            .st-key-catalog_hero_block
+            div[data-testid="stTextInput"]
+            input {
+                background: transparent !important;
+                background-color: transparent !important;
+                color: #111827 !important;
+                -webkit-text-fill-color: #111827 !important;
+                caret-color: #111827 !important;
+            }
+
+            /* Input harga tetap putih */
+            .st-key-price_filter_row
+            div[data-testid="stNumberInput"],
+
+            .st-key-price_filter_row
+            div[data-testid="stNumberInput"] > div,
+
+            .st-key-price_filter_row
+            div[data-testid="stNumberInput"]
+            div[data-baseweb="input"],
+
+            .st-key-price_filter_row
+            div[data-testid="stNumberInput"]
+            div[data-baseweb="base-input"] {
+                background: #ffffff !important;
+                background-color: #ffffff !important;
+                border-color: #cbd5e1 !important;
+                color-scheme: only light !important;
+                box-shadow: none !important;
+            }
+
+            .st-key-price_filter_row
+            div[data-testid="stNumberInput"]
+            input {
+                background: #ffffff !important;
+                background-color: #ffffff !important;
+                color: #111827 !important;
+                -webkit-text-fill-color: #111827 !important;
+                caret-color: #111827 !important;
+            }
+
+            /* Checkbox kosong tetap putih */
+            .st-key-filter_sidebar_box
+            div[data-testid="stCheckbox"]
+            div[role="checkbox"] {
+                background: #ffffff !important;
+                background-color: #ffffff !important;
+                border: 1px solid #94a3b8 !important;
+                color-scheme: only light !important;
+            }
+
+            /* Checkbox terpilih tetap biru */
+            .st-key-filter_sidebar_box
+            div[data-testid="stCheckbox"]
+            div[role="checkbox"][aria-checked="true"] {
+                background: #2563eb !important;
+                background-color: #2563eb !important;
+                border-color: #2563eb !important;
+            }
+
+            .st-key-filter_sidebar_box
+            div[data-testid="stCheckbox"]
+            div[role="checkbox"][aria-checked="true"] svg {
+                color: #ffffff !important;
+                fill: #ffffff !important;
+            }
+
+            /* Radio kosong tetap putih */
+            .st-key-search_sort
+            div[role="radio"] {
+                background: #ffffff !important;
+                background-color: #ffffff !important;
+                border: 1px solid #94a3b8 !important;
+                color-scheme: only light !important;
+            }
+
+            /* Radio aktif tetap biru */
+            .st-key-search_sort
+            div[role="radio"][aria-checked="true"] {
+                background: #2563eb !important;
+                background-color: #2563eb !important;
+                border-color: #2563eb !important;
+            }
+
+            .st-key-search_sort
+            div[role="radio"][aria-checked="true"]::after {
+                background: #ffffff !important;
+                background-color: #ffffff !important;
+            }
         }
 
         </style>
