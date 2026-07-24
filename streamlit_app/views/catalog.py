@@ -1666,7 +1666,7 @@ def load_catalog_css():
                 width: 100% !important;
                 padding-top: 8px;
                 gap: 6px !important;
-                align-items: flex-end !important;
+                align-items: center !important;
             }
 
             .st-key-price_filter_row div[data-testid="column"] {
@@ -1869,8 +1869,6 @@ def load_catalog_css():
                 width: 44px !important;
                 min-width: 44px !important;
                 max-width: 44px !important;
-                height: 36px !important;
-                min-height: 36px !important;
                 margin: 0 !important;
                 padding: 0 !important;
 
@@ -2461,6 +2459,116 @@ def load_catalog_css():
                 background: #ffffff !important;
                 background-color: #ffffff !important;
             }
+        }
+
+        /* ===== SEJAJARKAN FILTER HARGA DESKTOP DAN MOBILE ===== */
+        .st-key-price_filter_row {
+            width: 100% !important;
+        }
+
+        .st-key-price_filter_row div[data-testid="stHorizontalBlock"] {
+            display: flex !important;
+            width: 100% !important;
+            gap: 8px !important;
+            align-items: center !important;
+        }
+
+        /* Hilangkan jarak bawaan setiap kolom */
+        .st-key-price_filter_row div[data-testid="column"] {
+            min-width: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        .st-key-price_filter_row div[data-testid="stElementContainer"] {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        /* Wrapper input Min dan Maks */
+        .st-key-price_filter_row div[data-testid="stTextInput"],
+        .st-key-price_filter_row div[data-testid="stTextInput"] > div {
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        /* Kotak input sebenarnya */
+        .st-key-price_filter_row
+        div[data-testid="stTextInput"]
+        div[data-baseweb="input"] {
+            width: 100% !important;
+            height: 44px !important;
+            min-height: 44px !important;
+            margin: 0 !important;
+            padding: 0 !important;
+
+            background: #ffffff !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 10px !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
+        }
+
+        /* Input teks di dalamnya */
+        .st-key-price_filter_row
+        div[data-testid="stTextInput"]
+        input {
+            width: 100% !important;
+            height: 42px !important;
+            min-height: 42px !important;
+            margin: 0 !important;
+            padding: 0 12px !important;
+
+            background: transparent !important;
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+
+            color: #111827 !important;
+            -webkit-text-fill-color: #111827 !important;
+            box-sizing: border-box !important;
+        }
+
+        /* Wrapper tombol ceklis */
+        .st-key-price_filter_row .st-key-apply_price_filter {
+            width: 44px !important;
+            min-width: 44px !important;
+            max-width: 44px !important;
+            height: 44px !important;
+            margin: 0 !important;
+            padding: 0 !important;
+
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+
+        /* Tombol ceklis */
+        .st-key-price_filter_row .st-key-apply_price_filter button {
+            width: 44px !important;
+            min-width: 44px !important;
+            max-width: 44px !important;
+            height: 44px !important;
+            min-height: 44px !important;
+            max-height: 44px !important;
+
+            margin: 0 !important;
+            padding: 0 !important;
+
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+
+            border-radius: 10px !important;
+            box-sizing: border-box !important;
+        }
+
+        /* Simbol ceklis */
+        .st-key-price_filter_row .st-key-apply_price_filter button p {
+            margin: 0 !important;
+            padding: 0 !important;
+            line-height: 1 !important;
         }
 
         </style>
