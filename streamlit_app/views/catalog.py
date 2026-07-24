@@ -1942,6 +1942,115 @@ def load_catalog_css():
             }
 
         }
+
+        /* ===== FORCE LIGHT MODE ===== */
+        :root {
+            color-scheme: light !important;
+        }
+
+        html,
+        body,
+        .stApp,
+        [data-testid="stAppViewContainer"],
+        section[data-testid="stMain"] {
+            color-scheme: light !important;
+        }
+
+        /* Query pencarian katalog */
+        .st-key-catalog_hero_block
+        div[data-testid="stTextInput"]
+        div[data-baseweb="input"] {
+            background: #ffffff !important;
+            color: #111827 !important;
+        }
+
+        .st-key-catalog_hero_block
+        div[data-testid="stTextInput"]
+        input {
+            background-color: transparent !important;
+            color: #111827 !important;
+            -webkit-text-fill-color: #111827 !important;
+            caret-color: #111827 !important;
+        }
+
+        .st-key-catalog_hero_block
+        div[data-testid="stTextInput"]
+        input::placeholder {
+            color: #94a3b8 !important;
+            -webkit-text-fill-color: #94a3b8 !important;
+            opacity: 1 !important;
+        }
+
+        /* Input harga */
+        .st-key-filter_sidebar_box
+        div[data-testid="stNumberInput"]
+        div[data-baseweb="input"],
+        .st-key-filter_sidebar_box
+        div[data-testid="stNumberInput"]
+        div[data-baseweb="base-input"] {
+            background: #ffffff !important;
+            color: #111827 !important;
+        }
+
+        .st-key-filter_sidebar_box
+        div[data-testid="stNumberInput"]
+        input {
+            background: #ffffff !important;
+            color: #111827 !important;
+            -webkit-text-fill-color: #111827 !important;
+        }
+
+        /* Pilihan lokasi */
+        .st-key-filter_sidebar_box
+        div[data-baseweb="select"] > div {
+            background: #ffffff !important;
+            color: #111827 !important;
+        }
+
+        /* Modal pendaftaran produk */
+        div[data-testid="stDialog"] input,
+        div[data-testid="stDialog"] textarea,
+        div[data-testid="stDialog"] div[data-baseweb="input"],
+        div[data-testid="stDialog"] div[data-baseweb="select"] > div {
+            background: #ffffff !important;
+            color: #111827 !important;
+            -webkit-text-fill-color: #111827 !important;
+        }
+
+        /* Khusus browser/HP yang memakai dark mode */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                color-scheme: light !important;
+            }
+
+            input,
+            textarea,
+            select {
+                background-color: #ffffff !important;
+                color: #111827 !important;
+                -webkit-text-fill-color: #111827 !important;
+                caret-color: #111827 !important;
+            }
+
+            input::placeholder,
+            textarea::placeholder {
+                color: #94a3b8 !important;
+                -webkit-text-fill-color: #94a3b8 !important;
+                opacity: 1 !important;
+            }
+        }
+
+        /* Mencegah autofill Safari/Chrome menjadi gelap */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus,
+        textarea:-webkit-autofill,
+        select:-webkit-autofill {
+            -webkit-text-fill-color: #111827 !important;
+            -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+            box-shadow: 0 0 0 1000px #ffffff inset !important;
+        }
+        
         </style>
         """
     )
