@@ -1733,28 +1733,52 @@ def load_catalog_css():
                 padding: 0 10px !important;
             }
 
+            .st-key-initial_product_grid_wrap,
+            .st-key-search_result_grid_wrap,
+            .st-key-new_umkm_grid_wrap {
+                width: 100% !important;
+                max-width: 100% !important;
+                padding-left: 10px !important;
+                padding-right: 10px !important;
+                margin-left: auto !important;
+                margin-right: auto !important;
+                box-sizing: border-box !important;
+            }
+
             /* Setiap baris produk tidak lagi memakai layout 5 kolom pada mobile */
             .st-key-initial_product_grid_wrap div[data-testid="stHorizontalBlock"],
             .st-key-search_result_grid_wrap div[data-testid="stHorizontalBlock"],
             .st-key-new_umkm_grid_wrap div[data-testid="stHorizontalBlock"] {
-                display: block !important;
                 width: 100% !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                gap: 0 !important;
+                max-width: 100% !important;
+                margin-left: auto !important;
+                margin-right: auto !important;
+                box-sizing: border-box !important;
             }
 
-            /* Kolom yang berisi produk dibuat selebar layar */
             .st-key-initial_product_grid_wrap div[data-testid="column"]:has(.market-card-link),
             .st-key-search_result_grid_wrap div[data-testid="column"]:has(.market-card-link),
             .st-key-new_umkm_grid_wrap div[data-testid="column"]:has(.market-card-link) {
-                display: block !important;
                 width: 100% !important;
-                min-width: 0 !important;
-                max-width: none !important;
-                flex: none !important;
-                margin: 0 !important;
-                padding: 0 !important;
+                max-width: 100% !important;
+                margin-left: auto !important;
+                margin-right: auto !important;
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+                box-sizing: border-box !important;
+            }
+
+            .st-key-initial_product_grid_wrap .market-card-link,
+            .st-key-search_result_grid_wrap .market-card-link,
+            .st-key-new_umkm_grid_wrap .market-card-link,
+            .st-key-initial_product_grid_wrap .market-card,
+            .st-key-search_result_grid_wrap .market-card,
+            .st-key-new_umkm_grid_wrap .market-card {
+                width: 100% !important;
+                max-width: 100% !important;
+                margin-left: auto !important;
+                margin-right: auto !important;
+                box-sizing: border-box !important;
             }
 
             /* Sembunyikan empat kolom kosong hasil dari st.columns(5) */

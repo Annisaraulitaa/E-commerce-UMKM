@@ -616,6 +616,15 @@ def render_detail_product(product):
                 padding: 0 !important;
             }
 
+            /* Beri jarak antara kolom gambar dan kolom informasi produk */
+            section[data-testid="stMain"]
+            .block-container
+            div[data-testid="stHorizontalBlock"]
+            > div[data-testid="column"]:nth-child(2) {
+                margin-top: 20px !important;
+                padding-top: 0 !important;
+            }
+
             .product-image-card {
                 width: 100% !important;
                 height: auto !important;
@@ -644,13 +653,30 @@ def render_detail_product(product):
             .detail-info-wrap {
                 width: 100% !important;
                 max-width: none !important;
-                padding-top: 4px !important;
+                padding-top: 0px !important;
             }
 
             section[data-testid="stMain"]
             .block-container
             .detail-badge-row {
-                margin: 0 0 6px 0 !important;
+                margin: 0 0 10px 0 !important;
+                padding: 0 !important;
+            }
+
+            section[data-testid="stMain"]
+            .block-container
+            .product-image-card {
+                margin-bottom: 0 !important;
+            }
+
+            section[data-testid="stMain"]
+            .block-container
+            .detail-badge {
+                position: static !important;
+                top: 0 !important;
+                left: 0 !important;
+                margin: 0 !important;
+                transform: none !important;
             }
 
             section[data-testid="stMain"]

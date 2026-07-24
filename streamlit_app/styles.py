@@ -660,16 +660,25 @@ def load_css():
             }
 
             /* Konsistensi gap antar produk */
-            .catalog-grid-mobile,
+            .catalog-grid-mobile {
+                display: grid !important;
+                grid-template-columns: 1fr !important;
+                row-gap: 12px !important;
+                column-gap: 0 !important;
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+            }
+
             .st-key-initial_product_grid_wrap,
             .st-key-search_result_grid_wrap,
             .st-key-new_umkm_grid_wrap {
-                display: grid !important;
-                grid-template-columns: 1fr !important; 
-                row-gap: 12px !important;               
-                column-gap: 12px !important;            
-                padding-left: 8px !important;
-                padding-right: 8px !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                padding-left: 10px !important;
+                padding-right: 10px !important;
+                margin-left: auto !important;
+                margin-right: auto !important;
+                box-sizing: border-box !important;
             }
             
             .st-key-new_umkm_grid_wrap .catalog-info-bar {
