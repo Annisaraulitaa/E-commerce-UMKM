@@ -180,10 +180,10 @@ def render_search_filter_panel(data):
         st.session_state.price_max_filter = None
 
     if "price_min_input" not in st.session_state:
-        st.session_state.price_min_input = None
+        st.session_state.price_min_input = ""
 
     if "price_max_input" not in st.session_state:
-        st.session_state.price_max_input = None
+        st.session_state.price_max_input = ""
 
     st.markdown(
         """
@@ -305,20 +305,16 @@ def render_search_filter_panel(data):
         )
 
         with price_col1:
-            min_price = st.number_input(
+            min_price = st.text_input(
                 "Harga Min",
-                min_value=0,
-                value=None,
                 placeholder="Min",
                 label_visibility="collapsed",
                 key="price_min_input"
             )
 
         with price_col2:
-            max_price = st.number_input(
+            max_price = st.text_input(
                 "Harga Maks",
-                min_value=0,
-                value=None,
                 placeholder="Maks",
                 label_visibility="collapsed",
                 key="price_max_input"
@@ -332,18 +328,20 @@ def render_search_filter_panel(data):
                 help="Terapkan filter harga"
             )
 
-    if apply_price:
-        st.session_state.price_min_filter = (
-            int(min_price)
-            if min_price is not None and min_price > 0
-            else None
-        )
+    def parse_price(value):
+        text = str(value).replace(".", "").replace(",", "").strip()
 
-        st.session_state.price_max_filter = (
-            int(max_price)
-            if max_price is not None and max_price > 0
-            else None
-        )
+        if text == "":
+            return None
+
+        if text.isdigit():
+            return int(text)
+
+        return None
+    
+    if apply_price:
+        st.session_state.price_min_filter = parse_price(min_price)
+        st.session_state.price_max_filter = parse_price(max_price)
 
     if "price_number" in filtered.columns:
 
@@ -1445,7 +1443,7 @@ def load_catalog_css():
             font-weight:400 !important;
             color:#1e293b !important;
             margin-top:18px !important;
-            margin-bottom:10px !important;
+            margin-bottom:18px !important;
         }
 
         /* Label checkbox */
@@ -1470,84 +1468,49 @@ def load_catalog_css():
             font-size:14px !important;
         }
 
-        /* Input harga */
-        .st-key-filter_sidebar_box input {
-            border-radius:10px !important;
-            font-size:14px !important;
-        }
-
-        .st-key-filter_sidebar_box div[data-testid="stNumberInput"] {
+        /* ===== INPUT HARGA TEXT INPUT ===== */
+        .st-key-price_filter_row div[data-testid="stTextInput"] {
             width: 100% !important;
-            margin-top: 0 !important;
-        }
-
-        /* Input harga */
-        .st-key-filter_sidebar_box div[data-testid="stNumberInput"] input {
-            height:36px !important;
-            border-radius:10px !important;
-            font-size:12px !important;
-            background:#ffffff !important;
-            border:1px solid #cbd5e1 !important;
-            padding-left:10px !important;
-            outline:none !important;
-        }
-
-        /* Hilangkan border merah focus/error number input */
-        .st-key-filter_sidebar_box div[data-testid="stNumberInput"] div[data-baseweb="base-input"] {
-            border-color:#cbd5e1 !important;
-            box-shadow:none !important;
-        }
-
-        .st-key-filter_sidebar_box div[data-testid="stNumberInput"] div[data-baseweb="input"] {
-            border-color:#cbd5e1 !important;
-            box-shadow:none !important;
-        }
-
-        .st-key-filter_sidebar_box div[data-testid="stNumberInput"] div[data-baseweb="input"]:focus-within {
-            border-color:#cbd5e1 !important;
-            box-shadow:none !important;
-        }
-
-        .st-key-filter_sidebar_box div[data-testid="stNumberInput"] div:focus-within {
-            border-color:#cbd5e1 !important;
-            box-shadow:none !important;
-        }
-
-        /* Hilangkan spinner angka tanpa mengganggu input */
-        .st-key-filter_sidebar_box
-        div[data-testid="stNumberInput"]
-        input[type="number"] {
-            -moz-appearance: textfield !important;
-            appearance: textfield !important;
-        }
-
-        .st-key-filter_sidebar_box
-        div[data-testid="stNumberInput"]
-        input[type="number"]::-webkit-inner-spin-button,
-        .st-key-filter_sidebar_box
-        div[data-testid="stNumberInput"]
-        input[type="number"]::-webkit-outer-spin-button {
-            -webkit-appearance: none !important;
-            appearance: none !important;
             margin: 0 !important;
         }
 
-        /* Hilangkan tombol clear (×), plus (+), dan minus (-) pada NumberInput */
-        .st-key-filter_sidebar_box
-        div[data-testid="stNumberInput"]
-        button {
-            display: none !important;
-            visibility: hidden !important;
-            width: 0 !important;
-            min-width: 0 !important;
-            max-width: 0 !important;
-            height: 0 !important;
-            min-height: 0 !important;
-            max-height: 0 !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            border: 0 !important;
+        .st-key-price_filter_row div[data-testid="stTextInput"] > div {
+            width: 100% !important;
+        }
+
+        .st-key-price_filter_row div[data-baseweb="input"],
+        .st-key-price_filter_row div[data-baseweb="base-input"] {
+            width: 100% !important;
+            height: 38px !important;
+            min-height: 38px !important;
+            border-radius: 10px !important;
+            border: 1px solid #cbd5e1 !important;
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+            box-shadow: none !important;
             overflow: hidden !important;
+        }
+
+        .st-key-price_filter_row div[data-testid="stTextInput"] input {
+            width: 100% !important;
+            height: 38px !important;
+            min-height: 38px !important;
+            padding: 0 10px !important;
+            border: none !important;
+            outline: none !important;
+            background: transparent !important;
+            background-color: transparent !important;
+            color: #111827 !important;
+            -webkit-text-fill-color: #111827 !important;
+            caret-color: #111827 !important;
+            font-size: 12px !important;
+            box-sizing: border-box !important;
+        }
+
+        .st-key-price_filter_row div[data-testid="stTextInput"] input::placeholder {
+            color: #94a3b8 !important;
+            -webkit-text-fill-color: #94a3b8 !important;
+            opacity: 1 !important;
         }
 
         .st-key-filter_sidebar_box div[data-testid="stHorizontalBlock"] {
@@ -1724,18 +1687,18 @@ def load_catalog_css():
                 max-width: 38px !important;
             }
 
-            .st-key-price_filter_row div[data-testid="stNumberInput"] {
+            .st-key-price_filter_row div[data-testid="stTextInput"] {
                 width: 100% !important;
                 margin: 0 !important;
             }
 
-            .st-key-price_filter_row div[data-testid="stNumberInput"] input {
+            .st-key-price_filter_row div[data-testid="stTextInput"] input {
                 width: 100% !important;
                 height: 38px !important;
                 min-height: 38px !important;
-                padding: 0 8px !important;
-                font-size: 11px !important;
-                text-align: center !important;
+                padding: 0 10px !important;
+                font-size: 12px !important;
+                text-align: left !important;
                 box-sizing: border-box !important;
             }
 
@@ -1890,7 +1853,7 @@ def load_catalog_css():
                 flex: none !important;
             }
 
-            .st-key-filter_sidebar_box div[data-testid="stNumberInput"] {
+            .st-key-price_filter_row div[data-testid="stTextInput"] {
                 width: 100% !important;
                 margin-top: 0 !important;
             }
@@ -2158,26 +2121,27 @@ def load_catalog_css():
         }
 
         /* ===== INPUT HARGA ===== */
-        .st-key-filter_sidebar_box div[data-testid="stNumberInput"],
-        .st-key-filter_sidebar_box div[data-testid="stNumberInput"] > div,
-        .st-key-filter_sidebar_box div[data-testid="stNumberInput"] div[data-baseweb="input"],
-        .st-key-filter_sidebar_box div[data-testid="stNumberInput"] div[data-baseweb="base-input"] {
+        .st-key-price_filter_row div[data-testid="stTextInput"],
+        .st-key-price_filter_row div[data-testid="stTextInput"] > div,
+        .st-key-price_filter_row div[data-testid="stTextInput"] div[data-baseweb="input"],
+        .st-key-price_filter_row div[data-testid="stTextInput"] div[data-baseweb="base-input"] {
             background: #ffffff !important;
             background-color: #ffffff !important;
             border-color: #cbd5e1 !important;
             color: #111827 !important;
             box-shadow: none !important;
+            color-scheme: only light !important;
         }
 
-        .st-key-filter_sidebar_box div[data-testid="stNumberInput"] input {
-            background: #ffffff !important;
-            background-color: #ffffff !important;
+        .st-key-price_filter_row div[data-testid="stTextInput"] input {
+            background: transparent !important;
+            background-color: transparent !important;
             color: #111827 !important;
             -webkit-text-fill-color: #111827 !important;
             caret-color: #111827 !important;
         }
 
-        .st-key-filter_sidebar_box div[data-testid="stNumberInput"] input::placeholder {
+        .st-key-price_filter_row div[data-testid="stTextInput"] input::placeholder {
             color: #94a3b8 !important;
             -webkit-text-fill-color: #94a3b8 !important;
             opacity: 1 !important;
@@ -2286,6 +2250,29 @@ def load_catalog_css():
                 caret-color: #111827 !important;
             }
 
+            .st-key-catalog_hero_block
+            div[data-testid="stTextInput"]
+            div[data-baseweb="input"]{
+                background:#ffffff !important;
+            }
+
+            .st-key-catalog_hero_block
+            div[data-testid="stTextInput"]
+            input{
+                color:#111827 !important;
+                -webkit-text-fill-color:#111827 !important;
+            }
+
+            div[role="checkbox"]{
+                background:#ffffff !important;
+                border:1px solid #94a3b8 !important;
+            }
+
+            div[role="radio"]{
+                background:#ffffff !important;
+                border:1px solid #94a3b8 !important;
+            }
+
             input::placeholder,
             textarea::placeholder {
                 color: #94a3b8 !important;
@@ -2303,57 +2290,6 @@ def load_catalog_css():
             -webkit-text-fill-color: #111827 !important;
             -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
             box-shadow: 0 0 0 1000px #ffffff inset !important;
-        }
-
-        /* ===== NUMBER INPUT MOBILE TANPA X, MINUS, PLUS ===== */
-        @media (max-width: 700px) {
-
-            .st-key-price_filter_row
-            div[data-testid="stNumberInput"]
-            button {
-                display: none !important;
-                visibility: hidden !important;
-                width: 0 !important;
-                min-width: 0 !important;
-                max-width: 0 !important;
-                height: 0 !important;
-                min-height: 0 !important;
-                max-height: 0 !important;
-                padding: 0 !important;
-                margin: 0 !important;
-                border: 0 !important;
-                overflow: hidden !important;
-            }
-
-            .st-key-price_filter_row
-            div[data-testid="stNumberInput"]
-            div[data-baseweb="input"],
-
-            .st-key-price_filter_row
-            div[data-testid="stNumberInput"]
-            div[data-baseweb="base-input"] {
-                width: 100% !important;
-                min-width: 0 !important;
-                background: #ffffff !important;
-                background-color: #ffffff !important;
-                border-radius: 10px !important;
-                overflow: hidden !important;
-            }
-
-            .st-key-price_filter_row
-            div[data-testid="stNumberInput"]
-            input {
-                width: 100% !important;
-                height: 38px !important;
-                min-height: 38px !important;
-                padding: 0 10px !important;
-                text-align: left !important;
-                background: #ffffff !important;
-                background-color: #ffffff !important;
-                color: #111827 !important;
-                -webkit-text-fill-color: #111827 !important;
-                box-sizing: border-box !important;
-            }
         }
 
         /* ===== MOBILE DARK MODE FIX ===== */
@@ -2389,17 +2325,17 @@ def load_catalog_css():
 
             /* Input harga tetap putih */
             .st-key-price_filter_row
-            div[data-testid="stNumberInput"],
+            div[data-testid="stTextInput"],
 
             .st-key-price_filter_row
-            div[data-testid="stNumberInput"] > div,
+            div[data-testid="stTextInput"] > div,
 
             .st-key-price_filter_row
-            div[data-testid="stNumberInput"]
+            div[data-testid="stTextInput"]
             div[data-baseweb="input"],
 
             .st-key-price_filter_row
-            div[data-testid="stNumberInput"]
+            div[data-testid="stTextInput"]
             div[data-baseweb="base-input"] {
                 background: #ffffff !important;
                 background-color: #ffffff !important;
@@ -2409,7 +2345,7 @@ def load_catalog_css():
             }
 
             .st-key-price_filter_row
-            div[data-testid="stNumberInput"]
+            div[data-testid="stTextInput"]
             input {
                 background: #ffffff !important;
                 background-color: #ffffff !important;
