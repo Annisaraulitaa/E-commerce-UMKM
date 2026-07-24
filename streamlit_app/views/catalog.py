@@ -1632,6 +1632,7 @@ def load_catalog_css():
             .st-key-price_filter_row div[data-testid="stHorizontalBlock"] {
                 display: flex !important;
                 width: 100% !important;
+                padding-top: 8px;
                 gap: 6px !important;
                 align-items: flex-end !important;
             }
