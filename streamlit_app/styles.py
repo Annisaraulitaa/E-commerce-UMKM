@@ -673,7 +673,7 @@ def load_css():
             }
             
             .st-key-new_umkm_grid_wrap .catalog-info-bar {
-                margin-top: 2px !important;
+                margin-top: 4px !important;
                 margin-bottom: 2px !important;
                 padding-top: 2px !important;
                 padding-bottom: 2px !important;

@@ -571,6 +571,150 @@ def render_detail_product(product):
             font-weight: 750 !important;
         }
 
+        /* ===== MOBILE DETAIL PRODUCT ===== */
+        @media (max-width: 700px) {
+            section[data-testid="stMain"] {
+                min-height: 100vh !important;
+                display: block !important;
+                padding: 12px 0 24px 0 !important;
+            }
+
+            .block-container {
+                width: calc(100% - 20px) !important;
+                max-width: calc(100% - 20px) !important;
+                margin: 0 10px !important;
+                padding: 16px 14px 22px 14px !important;
+                border-radius: 18px !important;
+                box-sizing: border-box !important;
+            }
+
+            div[data-testid="stElementContainer"]:has(
+                div[data-testid="stButton"]
+            ) {
+                margin-bottom: 8px !important;
+            }
+
+            div[data-testid="stButton"] {
+                margin-bottom: 8px !important;
+            }
+
+            /* Ubah dua kolom gambar dan informasi menjadi satu kolom */
+            section[data-testid="stMain"]
+            .block-container
+            div[data-testid="stHorizontalBlock"] {
+                display: block !important;
+                width: 100% !important;
+            }
+
+            section[data-testid="stMain"]
+            .block-container
+            div[data-testid="stHorizontalBlock"]
+            > div[data-testid="column"] {
+                width: 100% !important;
+                min-width: 0 !important;
+                flex: none !important;
+                padding: 0 !important;
+            }
+
+            .product-image-card {
+                width: 100% !important;
+                height: auto !important;
+                min-height: 0 !important;
+                padding: 3px !important;
+                box-sizing: border-box !important;
+                border-radius: 10px !important;
+            }
+
+            .product-image-card img {
+                width: 100% !important;
+                height: auto !important;
+                max-height: 390px !important;
+                aspect-ratio: 1 / 1 !important;
+                object-fit: contain !important;
+                display: block !important;
+            }
+
+            .image-discount-note {
+                margin: 8px 0 14px 0 !important;
+                padding: 0 4px !important;
+                font-size: 13px !important;
+                line-height: 1.45 !important;
+            }
+
+            .detail-info-wrap {
+                width: 100% !important;
+                max-width: none !important;
+                padding-top: 4px !important;
+            }
+
+            section[data-testid="stMain"]
+            .block-container
+            .detail-badge-row {
+                margin: 0 0 6px 0 !important;
+            }
+
+            section[data-testid="stMain"]
+            .block-container
+            .detail-title {
+                min-height: 0 !important;
+                max-height: none !important;
+                font-size: 21px !important;
+                line-height: 1.3 !important;
+                margin-bottom: 8px !important;
+                -webkit-line-clamp: 3 !important;
+            }
+
+            section[data-testid="stMain"]
+            .block-container
+            .detail-meta {
+                font-size: 12.5px !important;
+                line-height: 1.5 !important;
+                margin-bottom: 14px !important;
+                white-space: normal !important;
+            }
+
+            section[data-testid="stMain"]
+            .block-container
+            .detail-price-box {
+                padding: 12px 14px !important;
+                margin-bottom: 14px !important;
+                border-radius: 14px !important;
+            }
+
+            section[data-testid="stMain"]
+            .block-container
+            .detail-price {
+                font-size: 26px !important;
+            }
+
+            section[data-testid="stMain"]
+            .block-container
+            .shop-box {
+                padding: 12px 14px !important;
+                margin-bottom: 12px !important;
+            }
+
+            section[data-testid="stMain"]
+            .block-container
+            .action-row {
+                grid-template-columns: 1fr !important;
+                gap: 10px !important;
+                margin: 12px 0 0 0 !important;
+            }
+
+            section[data-testid="stMain"]
+            .block-container
+            .market-action {
+                width: 100% !important;
+                min-height: 42px !important;
+                box-sizing: border-box !important;
+            }
+
+            .bottom-card-space {
+                height: 8px !important;
+            }
+        }
+
         </style>
         """,
         unsafe_allow_html=True,

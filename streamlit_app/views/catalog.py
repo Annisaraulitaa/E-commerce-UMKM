@@ -301,7 +301,10 @@ def render_search_filter_panel(data):
     )
 
 
-    price_col1, price_col2 = st.columns(2)
+    price_col1, price_col2, price_col3 = st.columns(
+        [1, 1, 0.72],
+        gap="small"
+    )
 
 
     with price_col1:
@@ -323,16 +326,15 @@ def render_search_filter_panel(data):
             label_visibility="collapsed"
         )
     
-    st.write("")
-
-    if st.button(
-        "PAKAI",
-        use_container_width=True,
-        key="apply_price_filter"
-    ):
-        st.session_state.price_min_filter = min_price
-        st.session_state.price_max_filter = max_price
-        st.rerun()
+    with price_col3:
+        if st.button(
+            "PAKAI",
+            use_container_width=True,
+            key="apply_price_filter"
+        ):
+            st.session_state.price_min_filter = min_price
+            st.session_state.price_max_filter = max_price
+            st.rerun()
 
 
     if "price_number" in filtered.columns:
@@ -1655,9 +1657,166 @@ def load_catalog_css():
                 padding: 0 14px;
             }
 
+            /* ===== RAPATKAN JARAK PRODUK SUBMITTED KE INFO BAR ===== */
+            .st-key-new_umkm_grid_wrap {
+                margin-bottom: 4px !important;
+                padding-bottom: 0 !important;
+            }
+
+            .st-key-new_umkm_grid_wrap > div,
+            .st-key-new_umkm_grid_wrap div[data-testid="stVerticalBlock"],
+            .st-key-new_umkm_grid_wrap div[data-testid="stHorizontalBlock"] {
+                margin-bottom: 0 !important;
+                padding-bottom: 0 !important;
+                row-gap: 8px !important;
+            }
+
+            .st-key-new_umkm_grid_wrap div[data-testid="column"] {
+                min-height: 0 !important;
+                margin-bottom: 0 !important;
+                padding-bottom: 0 !important;
+            }
+
+            .st-key-new_umkm_grid_wrap .market-card-link,
+            .st-key-new_umkm_grid_wrap .market-card {
+                margin-bottom: 0 !important;
+            }
+
             .catalog-info-bar {
                 align-items: flex-start;
                 flex-direction: column;
+                margin-top: 4px !important;
+            }
+
+            .catalog-new-umkm-bar {
+                margin-bottom: 4px !important;
+            }
+
+            /* ===== FILTER MOBILE ===== */
+            .st-key-filter_sidebar_box {
+                padding-left: 16px !important;
+                padding-right: 16px !important;
+            }
+
+            .st-key-filter_sidebar_box div[data-testid="stHorizontalBlock"] {
+                display: grid !important;
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto !important;
+                gap: 8px !important;
+                align-items: end !important;
+            }
+
+            .st-key-filter_sidebar_box div[data-testid="stHorizontalBlock"]
+            > div[data-testid="column"] {
+                width: 100% !important;
+                min-width: 0 !important;
+                flex: none !important;
+            }
+
+            .st-key-filter_sidebar_box div[data-testid="stNumberInput"] {
+                width: 100% !important;
+                margin-top: 0 !important;
+            }
+
+            .st-key-filter_sidebar_box .st-key-apply_price_filter {
+                display: flex !important;
+                align-items: flex-end !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            .st-key-filter_sidebar_box .st-key-apply_price_filter button {
+                width: 72px !important;
+                min-width: 72px !important;
+                height: 36px !important;
+                min-height: 36px !important;
+                margin: 0 !important;
+                padding: 0 10px !important;
+            }
+
+            /* Setiap baris produk tidak lagi memakai layout 5 kolom pada mobile */
+            .st-key-initial_product_grid_wrap div[data-testid="stHorizontalBlock"],
+            .st-key-search_result_grid_wrap div[data-testid="stHorizontalBlock"],
+            .st-key-new_umkm_grid_wrap div[data-testid="stHorizontalBlock"] {
+                display: block !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                gap: 0 !important;
+            }
+
+            /* Kolom yang berisi produk dibuat selebar layar */
+            .st-key-initial_product_grid_wrap div[data-testid="column"]:has(.market-card-link),
+            .st-key-search_result_grid_wrap div[data-testid="column"]:has(.market-card-link),
+            .st-key-new_umkm_grid_wrap div[data-testid="column"]:has(.market-card-link) {
+                display: block !important;
+                width: 100% !important;
+                min-width: 0 !important;
+                max-width: none !important;
+                flex: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            /* Sembunyikan empat kolom kosong hasil dari st.columns(5) */
+            .st-key-initial_product_grid_wrap div[data-testid="column"]:not(:has(.market-card-link)),
+            .st-key-search_result_grid_wrap div[data-testid="column"]:not(:has(.market-card-link)),
+            .st-key-new_umkm_grid_wrap div[data-testid="column"]:not(:has(.market-card-link)) {
+                display: none !important;
+            }
+
+            /* Jarak yang konsisten antar-card */
+            .st-key-initial_product_grid_wrap .market-card-link,
+            .st-key-search_result_grid_wrap .market-card-link,
+            .st-key-new_umkm_grid_wrap .market-card-link {
+                display: block !important;
+                width: 100% !important;
+                margin: 0 0 12px 0 !important;
+                padding: 0 !important;
+            }
+
+            /* Produk terakhir tidak membutuhkan jarak terlalu besar */
+            .st-key-initial_product_grid_wrap
+            div[data-testid="stHorizontalBlock"]:last-child
+            .market-card-link,
+
+            .st-key-search_result_grid_wrap
+            div[data-testid="stHorizontalBlock"]:last-child
+            .market-card-link,
+
+            .st-key-new_umkm_grid_wrap
+            div[data-testid="stHorizontalBlock"]:last-child
+            .market-card-link {
+                margin-bottom: 4px !important;
+            }
+
+            /* Hilangkan jarak bawaan wrapper Streamlit */
+            .st-key-initial_product_grid_wrap div[data-testid="stVerticalBlock"],
+            .st-key-search_result_grid_wrap div[data-testid="stVerticalBlock"],
+            .st-key-new_umkm_grid_wrap div[data-testid="stVerticalBlock"] {
+                gap: 0 !important;
+            }
+
+            .st-key-initial_product_grid_wrap div[data-testid="stElementContainer"],
+            .st-key-search_result_grid_wrap div[data-testid="stElementContainer"],
+            .st-key-new_umkm_grid_wrap div[data-testid="stElementContainer"] {
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            /* ===== GAMBAR PRODUCT CARD MOBILE ===== */
+            .market-image-wrap {
+                width: 100% !important;
+                height: 300px !important;
+                overflow: hidden !important;
+                background: #f1f5f9 !important;
+            }
+
+            .market-image {
+                width: 100% !important;
+                height: 100% !important;
+                object-fit: cover !important;
+                object-position: center !important;
+                transform: scale(1.06);
             }
 
         }
