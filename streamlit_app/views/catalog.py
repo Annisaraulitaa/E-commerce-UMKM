@@ -179,6 +179,12 @@ def render_search_filter_panel(data):
     if "price_max_filter" not in st.session_state:
         st.session_state.price_max_filter = None
 
+    if "price_min_input" not in st.session_state:
+        st.session_state.price_min_input = None
+
+    if "price_max_input" not in st.session_state:
+        st.session_state.price_max_input = None
+
     st.markdown(
         """
         <div class="filter-title">
@@ -253,42 +259,33 @@ def render_search_filter_panel(data):
             .str.upper()
         )
 
-
         mask = pd.Series(
             False,
             index=filtered.index
         )
-
 
         if "Official Store" in selected_seller:
             mask |= seller_type.eq(
                 "OFFICIAL_STORE"
             )
 
-
         if "Power Merchant" in selected_seller:
             mask |= seller_type.isin(
                 [
-                    "POWER_MERCHANT",
-                    "GOLD_OR_POWER_MERCHANT"
+                    "POWER_MERCHANT"
                 ]
             )
-
 
         if "Regular Merchant" in selected_seller:
             mask |= (
                 ~seller_type.isin(
                     [
-                        "OFFICIAL_STORE",
-                        "POWER_MERCHANT",
                         "GOLD_OR_POWER_MERCHANT"
                     ]
                 )
             )
 
-
         filtered = filtered[mask]
-
 
 
     # ==================
@@ -307,16 +304,15 @@ def render_search_filter_panel(data):
             gap="small"
         )
 
-
         with price_col1:
             min_price = st.number_input(
                 "Harga Min",
                 min_value=0,
                 value=None,
                 placeholder="Min",
-                label_visibility="collapsed"
+                label_visibility="collapsed",
+                key="price_min_input"
             )
-
 
         with price_col2:
             max_price = st.number_input(
@@ -324,22 +320,61 @@ def render_search_filter_panel(data):
                 min_value=0,
                 value=None,
                 placeholder="Maks",
-                label_visibility="collapsed"
+                label_visibility="collapsed",
+                key="price_max_input"
             )
-        
+
         with price_col3:
-            if st.button(
+            apply_price = st.button(
                 "✓",
                 use_container_width=True,
                 key="apply_price_filter",
                 help="Terapkan filter harga"
-            ):
-                st.session_state.price_min_filter = min_price
-                st.session_state.price_max_filter = max_price
-                st.rerun()
+            )
 
+    if apply_price:
+        st.session_state.price_min_filter = (
+            int(min_price)
+            if min_price is not None and min_price > 0
+            else None
+        )
+
+        st.session_state.price_max_filter = (
+            int(max_price)
+            if max_price is not None and max_price > 0
+            else None
+        )
 
     if "price_number" in filtered.columns:
+
+        filtered = filtered.copy()
+
+        price_text = (
+            filtered["price_number"]
+            .astype(str)
+            .str.strip()
+        )
+
+        price_text = price_text.str.replace(
+            r"\.0$",
+            "",
+            regex=True
+        )
+
+        price_text = price_text.str.replace(
+            r"[^\d]",
+            "",
+            regex=True
+        )
+
+        filtered["price_number"] = pd.to_numeric(
+            price_text,
+            errors="coerce"
+        )
+
+        filtered = filtered[
+            filtered["price_number"].notna()
+        ]
 
         saved_min = st.session_state.get(
             "price_min_filter",
@@ -351,21 +386,27 @@ def render_search_filter_panel(data):
             None
         )
 
+        if (
+            saved_min is not None
+            and saved_max is not None
+            and saved_min > saved_max
+        ):
+            st.warning(
+                "Harga minimum tidak boleh lebih besar daripada harga maksimum."
+            )
 
-        if saved_min is not None and saved_min > 0:
+        else:
+            if saved_min is not None:
+                filtered = filtered[
+                    filtered["price_number"] >= saved_min
+                ]
 
-            filtered = filtered[
-                filtered["price_number"] >= saved_min
-            ]
+            if saved_max is not None:
+                filtered = filtered[
+                    filtered["price_number"] <= saved_max
+                ]
 
-
-        if saved_max is not None and saved_max > 0:
-
-            filtered = filtered[
-                filtered["price_number"] <= saved_max
-            ]
-
-
+        filtered = filtered.reset_index(drop=True)
 
     # ==================
     # Rating
@@ -1472,13 +1513,23 @@ def load_catalog_css():
             box-shadow:none !important;
         }
 
-        /* Hapus tombol clear pada number input */
-        .st-key-filter_sidebar_box div[data-testid="stNumberInput"] button {
-            display:none !important;
-            visibility:hidden !important;
-            width:0 !important;
-            padding:0 !important;
-            margin:0 !important;
+        /* Hilangkan spinner angka tanpa mengganggu input */
+        .st-key-filter_sidebar_box
+        div[data-testid="stNumberInput"]
+        input[type="number"] {
+            -moz-appearance: textfield !important;
+            appearance: textfield !important;
+        }
+
+        .st-key-filter_sidebar_box
+        div[data-testid="stNumberInput"]
+        input[type="number"]::-webkit-inner-spin-button,
+        .st-key-filter_sidebar_box
+        div[data-testid="stNumberInput"]
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none !important;
+            appearance: none !important;
+            margin: 0 !important;
         }
 
         .st-key-filter_sidebar_box div[data-testid="stHorizontalBlock"] {
@@ -1705,6 +1756,33 @@ def load_catalog_css():
         }
 
         @media (max-width: 700px) {
+            /* ===== SORT DAN HASIL PENCARIAN MOBILE ===== */
+            .st-key-search_sort {
+                width: 100% !important;
+                padding-left: 16px !important;
+                padding-right: 16px !important;
+                box-sizing: border-box !important;
+            }
+
+            .st-key-search_sort [data-testid="stRadio"] > div {
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: wrap !important;
+                column-gap: 18px !important;
+                row-gap: 12px !important;
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+                align-items: center !important;
+            }
+
+            .catalog-search-title {
+                width: auto !important;
+                max-width: none !important;
+                margin: 12px 16px 15px 16px !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
+            }
+
             .catalog-hero {
                 border-radius: 0 0 18px 18px;
                 padding-top: 40px;
@@ -1943,87 +2021,245 @@ def load_catalog_css():
 
         }
 
-        /* ===== FORCE LIGHT MODE ===== */
-        :root {
-            color-scheme: light !important;
+        /* ===== FORCE LIGHT THEME UNTUK STREAMLIT / IOS ===== */
+        :root,
+        html,
+        body {
+            color-scheme: only light !important;
         }
 
         html,
         body,
         .stApp,
         [data-testid="stAppViewContainer"],
-        section[data-testid="stMain"] {
-            color-scheme: light !important;
+        section[data-testid="stMain"],
+        [data-testid="stMainBlockContainer"] {
+            background-color: #f5f5f1;
+            color: #0f172a !important;
+            color-scheme: only light !important;
         }
 
-        /* Query pencarian katalog */
+        /* ===== QUERY SEARCH ===== */
+        /* Wrapper luar harus transparan */
+        .st-key-catalog_hero_block div[data-testid="stTextInput"],
+        .st-key-catalog_hero_block div[data-testid="stTextInput"] > div {
+            background: transparent !important;
+            background-color: transparent !important;
+        }
+
+        /* Hanya kotak input utama yang berwarna putih */
         .st-key-catalog_hero_block
         div[data-testid="stTextInput"]
         div[data-baseweb="input"] {
             background: #ffffff !important;
+            background-color: #ffffff !important;
             color: #111827 !important;
+
+            border-radius: 14px !important;
+            border: 1px solid rgba(255, 255, 255, 0.35) !important;
+            overflow: hidden !important;
         }
 
+        /* Lapisan dalam mengikuti bentuk input */
         .st-key-catalog_hero_block
         div[data-testid="stTextInput"]
-        input {
+        div[data-baseweb="base-input"] {
+            background: transparent !important;
+            background-color: transparent !important;
+            border-radius: 14px !important;
+        }
+
+        .st-key-catalog_hero_block div[data-testid="stTextInput"] input {
             background-color: transparent !important;
             color: #111827 !important;
             -webkit-text-fill-color: #111827 !important;
             caret-color: #111827 !important;
+            opacity: 1 !important;
         }
 
-        .st-key-catalog_hero_block
-        div[data-testid="stTextInput"]
-        input::placeholder {
+        .st-key-catalog_hero_block div[data-testid="stTextInput"] input::placeholder {
             color: #94a3b8 !important;
             -webkit-text-fill-color: #94a3b8 !important;
             opacity: 1 !important;
         }
 
-        /* Input harga */
+        /* ===== PANEL FILTER ===== */
+        .st-key-filter_sidebar_box,
+        .st-key-filter_sidebar_box p,
+        .st-key-filter_sidebar_box label,
+        .st-key-filter_sidebar_box span {
+            color: #1e293b !important;
+            -webkit-text-fill-color: currentColor !important;
+        }
+
+        /* Judul filter */
+        .st-key-filter_sidebar_box .filter-title {
+            color: #2e4374 !important;
+        }
+
+        .st-key-filter_sidebar_box .filter-section-title,
+        .st-key-filter_sidebar_box div[data-testid="stWidgetLabel"] p {
+            color: #1e293b !important;
+        }
+
+        /* ===== MULTISELECT LOKASI ===== */
+        .st-key-filter_sidebar_box div[data-baseweb="select"],
+        .st-key-filter_sidebar_box div[data-baseweb="select"] > div,
+        .st-key-filter_sidebar_box div[data-baseweb="select"] div {
+            color-scheme: only light !important;
+        }
+
+        .st-key-filter_sidebar_box div[data-baseweb="select"] > div {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+            border-color: #cbd5e1 !important;
+            color: #334155 !important;
+        }
+
+        .st-key-filter_sidebar_box div[data-baseweb="select"] input {
+            background: transparent !important;
+            color: #334155 !important;
+            -webkit-text-fill-color: #334155 !important;
+        }
+
+        .st-key-filter_sidebar_box div[data-baseweb="select"] input::placeholder {
+            color: #94a3b8 !important;
+            -webkit-text-fill-color: #94a3b8 !important;
+        }
+
+        /* Chip lokasi yang sudah dipilih */
+        .st-key-filter_sidebar_box div[data-baseweb="tag"] {
+            background: #dbeafe !important;
+            color: #1d4ed8 !important;
+        }
+
+        .st-key-filter_sidebar_box div[data-baseweb="tag"] span,
+        .st-key-filter_sidebar_box div[data-baseweb="tag"] svg {
+            color: #1d4ed8 !important;
+            -webkit-text-fill-color: #1d4ed8 !important;
+        }
+
+        /* ===== INPUT HARGA ===== */
+        .st-key-filter_sidebar_box div[data-testid="stNumberInput"],
+        .st-key-filter_sidebar_box div[data-testid="stNumberInput"] > div,
+        .st-key-filter_sidebar_box div[data-testid="stNumberInput"] div[data-baseweb="input"],
+        .st-key-filter_sidebar_box div[data-testid="stNumberInput"] div[data-baseweb="base-input"] {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+            border-color: #cbd5e1 !important;
+            color: #111827 !important;
+            box-shadow: none !important;
+        }
+
+        .st-key-filter_sidebar_box div[data-testid="stNumberInput"] input {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+            color: #111827 !important;
+            -webkit-text-fill-color: #111827 !important;
+            caret-color: #111827 !important;
+        }
+
+        .st-key-filter_sidebar_box div[data-testid="stNumberInput"] input::placeholder {
+            color: #94a3b8 !important;
+            -webkit-text-fill-color: #94a3b8 !important;
+            opacity: 1 !important;
+        }
+
+        /* ===== CHECKBOX ===== */
+        .st-key-filter_sidebar_box div[data-testid="stCheckbox"] label,
+        .st-key-filter_sidebar_box div[data-testid="stCheckbox"] p {
+            color: #1e293b !important;
+            -webkit-text-fill-color: #1e293b !important;
+        }
+
         .st-key-filter_sidebar_box
-        div[data-testid="stNumberInput"]
-        div[data-baseweb="input"],
+        div[data-testid="stCheckbox"]
+        div[role="checkbox"] {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+            border: 1px solid #94a3b8 !important;
+            box-shadow: none !important;
+        }
+
         .st-key-filter_sidebar_box
-        div[data-testid="stNumberInput"]
-        div[data-baseweb="base-input"] {
+        div[data-testid="stCheckbox"]
+        div[role="checkbox"][aria-checked="true"] {
+            background: #2563eb !important;
+            background-color: #2563eb !important;
+            border-color: #2563eb !important;
+        }
+
+        .st-key-filter_sidebar_box
+        div[data-testid="stCheckbox"]
+        div[role="checkbox"][aria-checked="true"] svg {
+            color: #ffffff !important;
+        }
+
+        /* ===== RADIO SORT ===== */
+        .st-key-search_sort,
+        .st-key-search_sort label,
+        .st-key-search_sort p,
+        .st-key-search_sort span {
+            color: #1e293b !important;
+            -webkit-text-fill-color: #1e293b !important;
+        }
+
+        .st-key-search_sort div[role="radio"] {
+            background: #ffffff !important;
+            border-color: #64748b !important;
+        }
+
+        .st-key-search_sort div[role="radio"][aria-checked="true"] {
+            background: #2563eb !important;
+            border-color: #2563eb !important;
+        }
+
+        /* ===== DROPDOWN BASEWEB ===== */
+        div[role="listbox"],
+        ul[role="listbox"],
+        div[data-baseweb="popover"] {
             background: #ffffff !important;
             color: #111827 !important;
         }
 
-        .st-key-filter_sidebar_box
-        div[data-testid="stNumberInput"]
-        input {
+        div[role="option"] {
             background: #ffffff !important;
             color: #111827 !important;
             -webkit-text-fill-color: #111827 !important;
         }
 
-        /* Pilihan lokasi */
-        .st-key-filter_sidebar_box
-        div[data-baseweb="select"] > div {
-            background: #ffffff !important;
-            color: #111827 !important;
+        div[role="option"]:hover {
+            background: #eff6ff !important;
         }
 
-        /* Modal pendaftaran produk */
+        /* ===== DIALOG PENDAFTARAN ===== */
+        div[data-testid="stDialog"],
+        div[data-testid="stDialog"] > div,
+        div[data-testid="stDialog"] section {
+            color-scheme: only light !important;
+        }
+
         div[data-testid="stDialog"] input,
         div[data-testid="stDialog"] textarea,
         div[data-testid="stDialog"] div[data-baseweb="input"],
+        div[data-testid="stDialog"] div[data-baseweb="base-input"],
         div[data-testid="stDialog"] div[data-baseweb="select"] > div {
             background: #ffffff !important;
+            background-color: #ffffff !important;
             color: #111827 !important;
             -webkit-text-fill-color: #111827 !important;
         }
 
-        /* Khusus browser/HP yang memakai dark mode */
+        /* ===== IOS/SAFARI DARK MODE OVERRIDE ===== */
         @media (prefers-color-scheme: dark) {
-            :root {
-                color-scheme: light !important;
+            :root,
+            html,
+            body,
+            .stApp {
+                color-scheme: only light !important;
             }
 
-            input,
+            input:not([type="checkbox"]):not([type="radio"]),
             textarea,
             select {
                 background-color: #ffffff !important;
@@ -2040,7 +2276,7 @@ def load_catalog_css():
             }
         }
 
-        /* Mencegah autofill Safari/Chrome menjadi gelap */
+        /* ===== AUTOFILL SAFARI/CHROME ===== */
         input:-webkit-autofill,
         input:-webkit-autofill:hover,
         input:-webkit-autofill:focus,
@@ -2050,7 +2286,7 @@ def load_catalog_css():
             -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
             box-shadow: 0 0 0 1000px #ffffff inset !important;
         }
-        
+
         </style>
         """
     )
@@ -2190,22 +2426,33 @@ def render_catalog_page(df, recommender):
             )
 
 
-            visible_result = filtered_result.head(
-                st.session_state.visible_count
-            )
-
-            render_catalog_info_bar(
-                result_view=visible_result,
-                total_result=len(filtered_result),
-                is_search_result=True,
-                query=query_clean
-            )
-
-            with st.container(key="search_result_grid_wrap"):
-                render_catalog_grid(
-                    result_view=visible_result,
-                    key_prefix="search_result"
+            if filtered_result.empty:
+                render_catalog_info_bar(
+                    result_view=filtered_result,
+                    total_result=0,
+                    is_search_result=True,
+                    query=query_clean
                 )
+
+                render_empty_state()
+
+            else:
+                visible_result = filtered_result.head(
+                    st.session_state.visible_count
+                )
+
+                render_catalog_info_bar(
+                    result_view=visible_result,
+                    total_result=len(filtered_result),
+                    is_search_result=True,
+                    query=query_clean
+                )
+
+                with st.container(key="search_result_grid_wrap"):
+                    render_catalog_grid(
+                        result_view=visible_result,
+                        key_prefix="search_result"
+                    )
 
 
             if st.session_state.visible_count < len(filtered_result):

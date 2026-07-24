@@ -84,13 +84,34 @@ def get_category_text(row):
 def render_product_card(row, rank, key_prefix="product"):
     product_id = quote(str(row.get("id", rank)))
 
-    current_query = st.session_state.get("catalog_query", "")
-    current_filter = st.session_state.get("catalog_filter", "Semua")
+    current_query = str(
+        st.query_params.get(
+            "q",
+            st.session_state.get("catalog_query", "")
+        )
+    ).strip()
+
+    current_filter = str(
+        st.query_params.get(
+            "catalog_filter",
+            st.session_state.get("catalog_filter", "Semua")
+        )
+    ).strip()
+
+    # Pencarian baru secara default menampilkan UMKM.
+    if current_query and current_filter not in ["Semua", "UMKM"]:
+        current_filter = "UMKM"
 
     detail_url = (
         f"?page=Beranda"
         f"&product_id={product_id}"
     )
+
+    if current_query:
+        detail_url += f"&q={quote(current_query)}"
+
+    if current_filter:
+        detail_url += f"&catalog_filter={quote(current_filter)}"
 
     image_path = get_image_path(row.get("image_local_path"))
     image_src = image_to_base64(image_path) or placeholder_image()

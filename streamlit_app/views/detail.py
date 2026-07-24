@@ -608,7 +608,7 @@ def render_detail_product(product):
                 flex-direction: column !important;
                 width: 100% !important;
                 gap: 0 !important;
-                align-items: stretch !important;
+                align-items: center !important;
             }
 
             section[data-testid="stMain"]
@@ -667,7 +667,7 @@ def render_detail_product(product):
             .detail-meta {
                 font-size: 12.5px !important;
                 line-height: 1.55 !important;
-                margin-bottom: 14px !important;
+                margin-bottom: 18px !important;
                 white-space: normal !important;
             }
 
@@ -778,7 +778,7 @@ def render_detail_product(product):
             section[data-testid="stMain"]
             .block-container
             .detail-price-box {
-                margin: 0 !important;
+                margin-bottom: 10px !important;
             }
 
             /* Jarak antara informasi toko dan tombol */
@@ -792,7 +792,7 @@ def render_detail_product(product):
             section[data-testid="stMain"]
             .block-container
             .shop-box {
-                margin: 0 !important;
+                margin-bottom: 10px !important;
             }
 
             /* Tombol dimulai setelah informasi toko, tidak berhimpitan */
@@ -816,22 +816,39 @@ def render_detail_product(product):
     )
 
     if st.button("Kembali", icon=":material/chevron_left:"):
+        last_query = str(
+            st.query_params.get(
+                "q",
+                st.session_state.get("catalog_query", "")
+            )
+        ).strip()
+
+        last_filter = str(
+            st.query_params.get(
+                "catalog_filter",
+                st.session_state.get("catalog_filter", "Semua")
+            )
+        ).strip()
+
+        if last_filter not in ["Semua", "UMKM"]:
+            last_filter = "UMKM" if last_query else "Semua"
+
         st.session_state.current_page = "Beranda"
         st.session_state.selected_product = None
+        st.session_state.catalog_query = last_query
+        st.session_state.catalog_filter = last_filter
 
-        last_query = st.query_params.get("q", st.session_state.get("catalog_query", ""))
-        last_filter = st.query_params.get("catalog_filter", st.session_state.get("catalog_filter", "Semua"))
+        # Pertahankan mode hasil pencarian.
+        if last_query:
+            st.session_state.catalog_view_mode = "search"
 
         st.query_params.clear()
         st.query_params["page"] = "Beranda"
 
         if last_query:
             st.query_params["q"] = last_query
-            st.session_state.catalog_query = last_query
 
-        if last_filter:
-            st.query_params["catalog_filter"] = last_filter
-            st.session_state.catalog_filter = last_filter
+        st.query_params["catalog_filter"] = last_filter
 
         st.rerun()
 
