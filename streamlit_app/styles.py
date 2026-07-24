@@ -623,12 +623,60 @@ def load_css():
                 align-items: center !important;
                 justify-content: space-between !important;
                 gap: 6px;
+                margin-top: 0px !important;     
+                padding-top: 2px !important;    
+                padding-bottom: 2px !important;
+            }
+
+            .catalog-grid-mobile {
+                display: grid !important;
+                grid-template-columns: 1fr; 
+                row-gap: 12px;             
+                column-gap: 12px; 
+                padding-left: 8px !important;
+                padding-right: 8px !important;          
             }
 
             .catalog-info-left,
             .catalog-info-right {
                 white-space: nowrap !important;
                 flex-wrap: nowrap !important;
+            }
+
+            .st-key-new_umkm_grid_wrap {
+                margin-top: 0px !important;       
+                padding-top: 0px !important;
+            }
+
+            /* Container vertical block wrapper internal Streamlit */
+            div[data-testid="stVerticalBlock"][data-key="new_umkm_grid_wrap"] {
+                margin-top: 0px !important;
+                padding-top: 0px !important;
+            }
+
+            div[data-testid="stVerticalBlockBorderWrapper"] {
+                margin-top: 0px !important;
+                padding-top: 0px !important;
+            }
+
+            /* Konsistensi gap antar produk */
+            .catalog-grid-mobile,
+            .st-key-initial_product_grid_wrap,
+            .st-key-search_result_grid_wrap,
+            .st-key-new_umkm_grid_wrap {
+                display: grid !important;
+                grid-template-columns: 1fr !important; 
+                row-gap: 12px !important;               
+                column-gap: 12px !important;            
+                padding-left: 8px !important;
+                padding-right: 8px !important;
+            }
+            
+            .st-key-new_umkm_grid_wrap .catalog-info-bar {
+                margin-top: 2px !important;
+                margin-bottom: 2px !important;
+                padding-top: 2px !important;
+                padding-bottom: 2px !important;
             }
 
         }

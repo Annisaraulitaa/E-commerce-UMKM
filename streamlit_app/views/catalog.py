@@ -641,90 +641,61 @@ def render_new_umkm_section():
 
     new_products = get_approved_submissions()
 
-
     if new_products.empty:
         return
 
 
-    _html(
-        f"""
-        <div class="catalog-new-umkm-bar">
-            <div class="catalog-new-umkm-left">
-                <span class="catalog-new-umkm-icon">🌱</span>
-                <span>Produk UMKM Baru Bergabung</span>
+    with st.container(key="new_umkm_grid_wrap"):
+
+        # Info bar tetap seperti sebelumnya
+        _html(
+            f"""
+            <div class="catalog-new-umkm-bar">
+                <div class="catalog-new-umkm-left">
+                    <span class="catalog-new-umkm-icon">🌱</span>
+                    <span>Produk UMKM Baru Bergabung</span>
+                </div>
+
+                <div class="catalog-new-umkm-right">
+                    <span class="catalog-new-umkm-dot"></span>
+                    Produk baru: <b>{len(new_products)}</b>
+                </div>
             </div>
-
-            <div class="catalog-new-umkm-right">
-                <span class="catalog-new-umkm-dot"></span>
-                Produk baru: <b>{len(new_products)}</b>
-            </div>
-        </div>
-        """
-    )
-
-
-    converted_products = []
-
-
-    for _, row in new_products.iterrows():
-
-        converted_products.append(
-            {
-                "id": f"submission_{row.name}",
-                "source": "submission",
-                "name": row.get(
-                    "product_name",
-                    "-"
-                ),
-
-                "shop_name": row.get(
-                    "shop_name",
-                    "-"
-                ),
-
-                "price_number": row.get(
-                    "estimated_price",
-                    0
-                ),
-
-                "price_original": None,
-
-                "ratingAverage": 0,
-
-                "countReview": 0,
-
-                "countSold": 0,
-
-                "image_local_path": row.get(
-                    "image_local_path",
-                    ""
-                ),
-
-                "category_breadcrumb": row.get(
-                    "business_category",
-                    "UMKM"
-                ),
-
-                "umkm_label": 1,
-
-                "umkm_binary": 1,
-            }
+            """
         )
 
+        _html('<div class="catalog-grid-mobile">')
 
-    new_df = pd.DataFrame(
-        converted_products
-    )
+        converted_products = []
+
+        for _, row in new_products.iterrows():
+
+            converted_products.append(
+                {
+                    "id": f"submission_{row.name}",
+                    "source": "submission",
+                    "name": row.get("product_name", "-"),
+                    "shop_name": row.get("shop_name", "-"),
+                    "price_number": row.get("estimated_price", 0),
+                    "price_original": None,
+                    "ratingAverage": 0,
+                    "countReview": 0,
+                    "countSold": 0,
+                    "image_local_path": row.get("image_local_path", ""),
+                    "category_breadcrumb": row.get("business_category", "UMKM"),
+                    "umkm_label": 1,
+                    "umkm_binary": 1,
+                }
+            )
 
 
-    with st.container(
-        key="new_umkm_grid_wrap"
-    ):
+        new_df = pd.DataFrame(converted_products)
 
-        render_catalog_grid(
-            result_view=new_df.head(NEW_UMKM_DISPLAY),
-            key_prefix="new_umkm"
-        )
+        if not new_df.empty:
+            render_catalog_grid(result_view=new_df.head(NEW_UMKM_DISPLAY), key_prefix="new_umkm")
+        
+        _html('</div>')
+
 
 def load_catalog_css():
     _html(
