@@ -1830,7 +1830,7 @@ def load_catalog_css():
             }
 
             .catalog-new-umkm-bar {
-                margin-bottom: 4px !important;
+                margin-bottom: 6px !important;
             }
 
             /* ===== FILTER MOBILE ===== */
@@ -1893,8 +1893,8 @@ def load_catalog_css():
             .st-key-new_umkm_grid_wrap {
                 width: 100% !important;
                 max-width: 100% !important;
-                padding-left: 10px !important;
-                padding-right: 10px !important;
+                padding-left: 0 !important;
+                padding-right: 0 !important;
                 margin-left: auto !important;
                 margin-right: auto !important;
                 box-sizing: border-box !important;
