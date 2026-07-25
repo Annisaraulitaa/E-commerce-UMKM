@@ -27,9 +27,25 @@ def load_data():
         .astype(int)
     )
 
-    if "image_url" in df.columns:
-        df["image_display"] = df["image_url"].fillna("")  # fallback kalau kosong
-    else:
-        df["image_display"] = df["image_local_path"].fillna("")
+    df["image_url"] = (
+        df["image_url"]
+        .fillna("")
+        if "image_url" in df.columns
+        else ""
+    )
+
+    df["image_local_path"] = (
+        df["image_local_path"]
+        .fillna("")
+        if "image_local_path" in df.columns
+        else ""
+    )
+
+    df["image_display"] = df["image_url"]
+
+    df.loc[
+        df["image_display"] == "",
+        "image_display"
+    ] = df["image_local_path"]
 
     return df

@@ -81,7 +81,16 @@ def render_detail_product(product):
         st.warning("Produk belum dipilih.")
         return
 
-    image_path = get_image_path(product.get("image_local_path"))
+    image_url = _clean_url(
+        product.get("image_url")
+    )
+
+    image_path = None
+
+    if not image_url:
+        image_path = get_image_path(
+            product.get("image_local_path")
+        )
 
     name = html.escape(str(get_value(product, "name", default="-")))
     product_url = _clean_url(get_value(product, "url", default=""))
@@ -869,12 +878,24 @@ def render_detail_product(product):
 
     with col_img:
         try:
-            if image_path is not None:
+
+            if image_url:
+                image_src = image_url
+
+            elif image_path is not None:
                 image_src = _image_to_data_uri(image_path)
+
             else:
-                image_src = _placeholder_image_data_uri(name, category)
+                image_src = _placeholder_image_data_uri(
+                    name,
+                    category
+                )
+
         except Exception:
-            image_src = _placeholder_image_data_uri(name, category)
+            image_src = _placeholder_image_data_uri(
+                name,
+                category
+            )
 
         image_parts = [
             '<div class="product-image-card">',
