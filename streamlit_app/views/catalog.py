@@ -486,6 +486,7 @@ def render_search_filter_panel(data):
 
 
 def get_initial_products(df, n=INITIAL_RANDOM_MAX_DISPLAY):
+
     cache_key = "catalog_initial_products"
 
     if cache_key in st.session_state:
@@ -495,42 +496,36 @@ def get_initial_products(df, n=INITIAL_RANDOM_MAX_DISPLAY):
         st.session_state[cache_key] = pd.DataFrame()
         return st.session_state[cache_key]
 
-    sample_size = min(n, len(df))
 
+    # Ambil hanya produk UMKM
     umkm_mask = get_umkm_mask(df)
+
     umkm_df = df[umkm_mask]
-    non_umkm_df = df[~umkm_mask]
 
-    # Mayoritas UMKM, tetapi tetap ada Non-UMKM agar filter informatif.
-    umkm_target = min(int(sample_size * 0.72), len(umkm_df))
-    non_umkm_target = min(sample_size - umkm_target, len(non_umkm_df))
 
-    parts = []
+    if umkm_df.empty:
+        st.session_state[cache_key] = pd.DataFrame()
+        return st.session_state[cache_key]
 
-    if umkm_target > 0:
-        parts.append(umkm_df.sample(n=umkm_target))
 
-    if non_umkm_target > 0:
-        parts.append(non_umkm_df.sample(n=non_umkm_target))
+    sample_size = min(
+        n,
+        len(umkm_df)
+    )
 
-    if parts:
-        initial_products = pd.concat(parts, axis=0)
-    else:
-        initial_products = df.sample(n=sample_size)
 
-    if len(initial_products) < sample_size:
-        remaining = df.drop(index=initial_products.index, errors="ignore")
-        need = sample_size - len(initial_products)
+    initial_products = (
+        umkm_df
+        .sample(
+            n=sample_size,
+            random_state=None
+        )
+        .reset_index(drop=True)
+    )
 
-        if not remaining.empty and need > 0:
-            initial_products = pd.concat(
-                [initial_products, remaining.sample(n=min(need, len(remaining)))],
-                axis=0,
-            )
-
-    initial_products = initial_products.sample(frac=1).reset_index(drop=True)
 
     st.session_state[cache_key] = initial_products
+
     return initial_products
 
 
