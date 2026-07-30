@@ -61,11 +61,11 @@ class UMKMRecommender:
         top_n_candidates=TOP_N_CANDIDATES,
         top_k_results=TOP_K_RESULTS,
         weight_relevance=WEIGHT_RELEVANCE,
-        weight_popularity=WEIGHT_PERFORMANCE,
+        weight_performance=WEIGHT_PERFORMANCE,
         weight_value=WEIGHT_VALUE,
-        popularity_sold_weight=PERFORMANCE_SOLD_WEIGHT,
-        popularity_review_weight=PERFORMANCE_REVIEW_WEIGHT,
-        popularity_total_rating_weight=PERFORMANCE_TOTAL_RATING_WEIGHT,
+        performance_sold_weight=PERFORMANCE_SOLD_WEIGHT,
+        performance_review_weight=PERFORMANCE_REVIEW_WEIGHT,
+        performance_total_rating_weight=PERFORMANCE_TOTAL_RATING_WEIGHT,
         value_rating_weight=VALUE_RATING_WEIGHT,
         value_discount_weight=VALUE_DISCOUNT_WEIGHT,
     ):
@@ -110,10 +110,10 @@ class UMKMRecommender:
         result["countReview_norm"] = self.normalize_score(np.log1p(count_review))
         result["totalRating_norm"] = self.normalize_score(np.log1p(total_rating))
 
-        result["popularity_score"] = (
-            popularity_sold_weight * result["countSold_norm"] +
-            popularity_review_weight * result["countReview_norm"] +
-            popularity_total_rating_weight * result["totalRating_norm"]
+        result["performance_score"] = (
+            performance_sold_weight * result["countSold_norm"] +
+            performance_review_weight * result["countReview_norm"] +
+            performance_total_rating_weight * result["totalRating_norm"]
         )
 
         # =====================================================
@@ -137,7 +137,7 @@ class UMKMRecommender:
         # =====================================================
         result["base_score"] = (
             weight_relevance * result["relevance_score"] +
-            weight_popularity * result["popularity_score"] +
+            weight_performance * result["performance_score"] +
             weight_value * result["value_score"]
         )
 
