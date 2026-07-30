@@ -43,16 +43,16 @@ TOP_K_RESULTS = 60
 # MAIN HYBRID WEIGHTS
 # =========================================================
 WEIGHT_RELEVANCE = 0.50
-WEIGHT_POPULARITY = 0.25
+WEIGHT_PERFORMANCE = 0.25
 WEIGHT_VALUE = 0.25
 
 
 # =========================================================
-# POPULARITY INTERNAL WEIGHTS
+# PERFORMANCE INTERNAL WEIGHTS
 # =========================================================
-POPULARITY_SOLD_WEIGHT = 0.50
-POPULARITY_REVIEW_WEIGHT = 0.25
-POPULARITY_TOTAL_RATING_WEIGHT = 0.25
+PERFORMANCE_SOLD_WEIGHT = 0.34
+PERFORMANCE_REVIEW_WEIGHT = 0.33
+PERFORMANCE_TOTAL_RATING_WEIGHT = 0.33
 
 
 # =========================================================

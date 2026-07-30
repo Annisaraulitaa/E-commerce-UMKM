@@ -11,7 +11,7 @@ from config import (
     INITIAL_DISPLAY,
     LOAD_MORE_STEP,
     SEARCH_POOL_SIZE,
-    WEIGHT_POPULARITY,
+    WEIGHT_PERFORMANCE,
     WEIGHT_RELEVANCE,
     WEIGHT_VALUE,
 )
@@ -2653,7 +2653,7 @@ def render_catalog_page(df, recommender):
                 query=query_clean,
                 top_n=SEARCH_POOL_SIZE,
                 weight_relevance=WEIGHT_RELEVANCE,
-                weight_popularity=WEIGHT_POPULARITY,
+                weight_performance=WEIGHT_PERFORMANCE,
                 weight_value=WEIGHT_VALUE,
             )
 
